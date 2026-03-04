@@ -1,6 +1,8 @@
 "use client";
 
 import { Icon, IconProvider } from "@iconkit/react";
+import { FlagPride16Filled } from "@iconkit/react/fluent";
+import { Icon3dCoordinateAxis } from "@iconkit/react/streamline-plump-color";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -26,7 +28,6 @@ import {
 import { PackageBold } from "@iconkit/react/ph";
 
 // Multi-color icon set
-import { Fire } from "@iconkit/react/twemoji";
 
 export default function SandboxPage() {
   return (
@@ -418,7 +419,23 @@ function MultiColorStaticExample() {
 <Fire size={48} />`}
     >
       <div className="flex items-center justify-center py-4">
-        <Fire size={500} colors={["red", "orange"]} />
+        <FlagPride16Filled
+          size={128}
+          colors={[
+            "#ffffff",
+            "#000000",
+            "#ff4800",
+            "#793131",
+            "#0dff00",
+            "#530dcd",
+            "blue",
+            "gray",
+          ]}
+        />
+        <Icon3dCoordinateAxis
+          size={128}
+          colors={["#ffffff", "#000000", "#ff4800"]}
+        />
       </div>
     </ExampleSection>
   );

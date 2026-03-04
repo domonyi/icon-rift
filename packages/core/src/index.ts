@@ -4,4 +4,5 @@ export type {
   IconSetMeta,
   IconEntry,
   IconLoader,
+  ColorsTuple,
 } from "./types"

@@ -55,3 +55,16 @@ export interface IconEntry {
 }
 
 export type IconLoader = (set: string, name: string) => Promise<string>
+
+/** Maps a palette length N to a tuple of N optional strings (up to 8) */
+export type ColorsTuple<N extends number> =
+  N extends 0 ? [] :
+  N extends 1 ? [string?] :
+  N extends 2 ? [string?, string?] :
+  N extends 3 ? [string?, string?, string?] :
+  N extends 4 ? [string?, string?, string?, string?] :
+  N extends 5 ? [string?, string?, string?, string?, string?] :
+  N extends 6 ? [string?, string?, string?, string?, string?, string?] :
+  N extends 7 ? [string?, string?, string?, string?, string?, string?, string?] :
+  N extends 8 ? [string?, string?, string?, string?, string?, string?, string?, string?] :
+  string[]

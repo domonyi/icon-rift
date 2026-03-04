@@ -1,6 +1,6 @@
 export { Icon, type IconProps } from "./Icon"
 export { IconProvider, useIconContext, type IconProviderProps, type IconContextValue } from "./IconProvider"
-export { createIcon, type IconComponentProps } from "./createIcon"
+export { createIcon, type IconComponentProps, type TypedIconProps, type IconComponent } from "./createIcon"
 
 // Re-export core utilities so users don't need to install @iconkit/core separately
 export {
@@ -14,4 +14,5 @@ export {
   type IconSetMeta,
   type IconEntry,
   type IconLoader,
+  type ColorsTuple,
 } from "@iconkit/core"
