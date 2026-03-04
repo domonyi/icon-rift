@@ -1,0 +1,160 @@
+import fs from "fs"
+import path from "path"
+import type { IconSetMeta } from "@iconkit/core"
+
+function findRootDir(): string {
+  let dir = process.cwd()
+  for (let i = 0; i < 5; i++) {
+    if (fs.existsSync(path.join(dir, "svg"))) return dir
+    dir = path.dirname(dir)
+  }
+  throw new Error("Cannot find project root (svg/ directory)")
+}
+
+const ROOT = findRootDir()
+const SVG_DIR = path.join(ROOT, "svg")
+const COLLECTIONS_PATH = path.join(
+  ROOT,
+  "node_modules",
+  "@iconify",
+  "json",
+  "collections.json"
+)
+
+// Cache for collections metadata
+let collectionsRaw: Record<string, Record<string, unknown>> | null = null
+
+function loadCollectionsRaw(): Record<string, Record<string, unknown>> {
+  if (!collectionsRaw) {
+    collectionsRaw = JSON.parse(fs.readFileSync(COLLECTIONS_PATH, "utf8"))
+  }
+  return collectionsRaw!
+}
+
+// Cache for icon name lists per set
+const iconNamesCache = new Map<string, string[]>()
+
+/**
+ * Get metadata for all icon sets.
+ */
+export function getCollections(): IconSetMeta[] {
+  const raw = loadCollectionsRaw()
+  return Object.entries(raw).map(([prefix, meta]) => ({
+    prefix,
+    name: (meta.name as string) || prefix,
+    total: (meta.total as number) || 0,
+    author: (meta.author as { name: string; url?: string }) || { name: "Unknown" },
+    license: (meta.license as { title: string; spdx: string }) || {
+      title: "Unknown",
+      spdx: "Unknown",
+    },
+    category: (meta.category as string) || "General",
+    height: (meta.height as number | number[]) || 24,
+    palette: (meta.palette as boolean) || false,
+    samples: (meta.samples as string[]) || [],
+  }))
+}
+
+/**
+ * Get metadata for a single icon set.
+ */
+export function getCollection(prefix: string): IconSetMeta | null {
+  const all = getCollections()
+  return all.find((c) => c.prefix === prefix) ?? null
+}
+
+/**
+ * Get all icon names for a set (from the filesystem).
+ */
+export function getIconNames(prefix: string): string[] {
+  if (iconNamesCache.has(prefix)) return iconNamesCache.get(prefix)!
+
+  const dir = path.join(SVG_DIR, prefix)
+  if (!fs.existsSync(dir)) return []
+
+  const names = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith(".svg"))
+    .map((f) => f.slice(0, -4))
+    .sort()
+
+  iconNamesCache.set(prefix, names)
+  return names
+}
+
+/**
+ * Read an SVG file for a specific icon.
+ */
+export function getIconSvg(prefix: string, name: string): string {
+  const filePath = path.join(SVG_DIR, prefix, `${name}.svg`)
+  try {
+    return fs.readFileSync(filePath, "utf8")
+  } catch {
+    return ""
+  }
+}
+
+/**
+ * Get sample icons for a set (with SVG content).
+ */
+export function getSampleIcons(
+  prefix: string,
+  count = 4
+): Array<{ name: string; svg: string }> {
+  const meta = getCollection(prefix)
+  let names: string[]
+
+  if (meta?.samples && meta.samples.length > 0) {
+    names = meta.samples.slice(0, count)
+    // Verify these actually exist, fall back to directory listing
+    const existing = names.filter((n) => {
+      const p = path.join(SVG_DIR, prefix, `${n}.svg`)
+      return fs.existsSync(p)
+    })
+    if (existing.length >= count) {
+      names = existing.slice(0, count)
+    } else {
+      names = getIconNames(prefix).slice(0, count)
+    }
+  } else {
+    names = getIconNames(prefix).slice(0, count)
+  }
+
+  return names.map((name) => ({
+    name,
+    svg: getIconSvg(prefix, name),
+  }))
+}
+
+/**
+ * Get a page of icons with SVG content.
+ */
+export function getIconsPage(
+  prefix: string,
+  page: number,
+  perPage: number,
+  query?: string
+): {
+  icons: Array<{ name: string; svg: string }>
+  total: number
+  totalPages: number
+} {
+  let names = getIconNames(prefix)
+
+  if (query) {
+    const q = query.toLowerCase()
+    names = names.filter((n) => n.toLowerCase().includes(q))
+  }
+
+  const total = names.length
+  const totalPages = Math.ceil(total / perPage)
+  const start = (page - 1) * perPage
+  const pageNames = names.slice(start, start + perPage)
+
+  const icons = pageNames.map((name) => ({
+    name,
+    svg: getIconSvg(prefix, name),
+  }))
+
+  return { icons, total, totalPages }
+}

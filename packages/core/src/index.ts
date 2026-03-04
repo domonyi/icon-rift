@@ -1,0 +1,7 @@
+export { customizeSvg, getSvgBody, getSvgAttributes, svgToDataUri, svgToBase64 } from "./svg"
+export type {
+  IconCustomizations,
+  IconSetMeta,
+  IconEntry,
+  IconLoader,
+} from "./types"
