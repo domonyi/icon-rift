@@ -436,6 +436,7 @@ function MultiColorStaticExample() {
           size={128}
           colors={["#ffffff", "#000000", "#ff4800"]}
         />
+        <Bell size={128} colors={["red"]} /> {/* Monotone */}
       </div>
     </ExampleSection>
   );
