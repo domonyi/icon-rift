@@ -1,18 +1,77 @@
 import type { IconCustomizations } from "./types"
 
+// --- Palette utilities ---
+
+/** Colors that should never appear in the palette */
+function shouldSkipColor(value: string): boolean {
+  const v = value.trim().toLowerCase()
+  return v === "none" || v === "inherit" || v === "transparent" || v.startsWith("url(")
+}
+
+/** Normalize a hex color to lowercase 6-digit form for deduplication */
+function normalizeColor(raw: string): string {
+  const c = raw.trim().toLowerCase()
+  // Expand shorthand #rgb → #rrggbb
+  const m = c.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i)
+  if (m) return `#${m[1]}${m[1]}${m[2]}${m[2]}${m[3]}${m[3]}`
+  return c
+}
+
+/** Escape a string for use in a RegExp */
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/**
+ * Extract the unique color palette from an SVG string.
+ * Returns colors in order of first appearance (fill before stroke when on the same element).
+ * Skips `none`, `url(...)`, `inherit`, `transparent`.
+ * `currentColor` is always placed at index 0 if present.
+ */
+export function extractPalette(svg: string): string[] {
+  const seen = new Set<string>()
+  const palette: string[] = []
+
+  const regex = /(?:fill|stroke)\s*=\s*"([^"]*)"/gi
+  let m: RegExpExecArray | null
+  while ((m = regex.exec(svg)) !== null) {
+    const raw = m[1]
+    if (shouldSkipColor(raw)) continue
+    const normalized = normalizeColor(raw)
+    if (!seen.has(normalized)) {
+      seen.add(normalized)
+      palette.push(raw) // keep original casing for replacement
+    }
+  }
+
+  // Move currentColor to index 0 if present
+  const ccIdx = palette.findIndex((c) => c.toLowerCase() === "currentcolor")
+  if (ccIdx > 0) {
+    const [cc] = palette.splice(ccIdx, 1)
+    palette.unshift(cc)
+  }
+
+  return palette
+}
+
 /**
  * Customize an SVG string with the given options.
  * Works with any well-formed SVG element string.
+ *
+ * @param palette - Pre-extracted color palette (from extractPalette or build-time).
+ *                  When provided together with `colors`, enables positional color replacement.
  */
 export function customizeSvg(
   svg: string,
-  options: IconCustomizations = {}
+  options: IconCustomizations = {},
+  palette?: string[]
 ): string {
   const {
     size = 24,
     width,
     height,
     color = "currentColor",
+    colors,
     stroke,
     strokeWidth = 2,
     absoluteStrokeWidth = false,
@@ -53,14 +112,35 @@ export function customizeSvg(
   // ViewBox
   if (viewBox) attrs.set("viewBox", viewBox)
 
-  // Color: replace currentColor in both attributes and body
+  // Color replacement
   let processedBody = body
-  for (const [key, val] of attrs.entries()) {
-    if (val.includes("currentColor")) {
-      attrs.set(key, val.replace(/currentColor/g, color))
+
+  if (colors && colors.length > 0 && palette && palette.length > 0) {
+    // Positional palette replacement: colors[i] replaces palette[i]
+    // Sort replacements by length descending to avoid partial matches (e.g. #fff inside #ffffff)
+    const replacements = palette
+      .map((original, i) => ({ original, replacement: colors[i] }))
+      .filter((r) => r.replacement !== undefined)
+      .sort((a, b) => b.original.length - a.original.length)
+
+    for (const { original, replacement } of replacements) {
+      const re = new RegExp(escapeRegex(original), "g")
+      processedBody = processedBody.replace(re, replacement)
+      for (const [key, val] of attrs.entries()) {
+        if (val.includes(original)) {
+          attrs.set(key, val.replace(re, replacement))
+        }
+      }
     }
+  } else {
+    // Legacy behavior: replace currentColor with `color` prop
+    for (const [key, val] of attrs.entries()) {
+      if (val.includes("currentColor")) {
+        attrs.set(key, val.replace(/currentColor/g, color))
+      }
+    }
+    processedBody = processedBody.replace(/currentColor/g, color)
   }
-  processedBody = processedBody.replace(/currentColor/g, color)
 
   // Stroke properties
   if (stroke) attrs.set("stroke", stroke)

@@ -16,6 +16,12 @@ function loadSamples() {
     { set: "lucide", name: "airplay" },
     { set: "lucide", name: "alarm-clock" },
     { set: "lucide", name: "accessibility" },
+    // Multi-color samples
+    { set: "twemoji", name: "1st-place-medal" },
+    { set: "twemoji", name: "artist-palette" },
+    { set: "twemoji", name: "fire" },
+    { set: "flat-color-icons", name: "like" },
+    { set: "flat-color-icons", name: "globe" },
   ]
   return picks
     .map((p) => ({ ...p, svg: getIconSvg(p.set, p.name) }))

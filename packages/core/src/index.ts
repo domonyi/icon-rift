@@ -1,4 +1,4 @@
-export { customizeSvg, getSvgBody, getSvgAttributes, svgToDataUri, svgToBase64 } from "./svg"
+export { customizeSvg, extractPalette, getSvgBody, getSvgAttributes, svgToDataUri, svgToBase64 } from "./svg"
 export type {
   IconCustomizations,
   IconSetMeta,

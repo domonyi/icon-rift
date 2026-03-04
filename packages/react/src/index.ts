@@ -5,6 +5,7 @@ export { createIcon, type IconComponentProps } from "./createIcon"
 // Re-export core utilities so users don't need to install @iconkit/core separately
 export {
   customizeSvg,
+  extractPalette,
   getSvgBody,
   getSvgAttributes,
   svgToDataUri,

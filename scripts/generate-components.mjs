@@ -39,6 +39,43 @@ function escapeSvg(svg) {
   return svg.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\${/g, "\\${")
 }
 
+// --- Palette extraction (mirrors @iconkit/core extractPalette) ---
+
+function shouldSkipColor(value) {
+  const v = value.trim().toLowerCase()
+  return v === "none" || v === "inherit" || v === "transparent" || v.startsWith("url(")
+}
+
+function normalizeColor(raw) {
+  const c = raw.trim().toLowerCase()
+  const m = c.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i)
+  if (m) return `#${m[1]}${m[1]}${m[2]}${m[2]}${m[3]}${m[3]}`
+  return c
+}
+
+function extractPalette(svg) {
+  const seen = new Set()
+  const palette = []
+  const regex = /(?:fill|stroke)\s*=\s*"([^"]*)"/gi
+  let m
+  while ((m = regex.exec(svg)) !== null) {
+    const raw = m[1]
+    if (shouldSkipColor(raw)) continue
+    const normalized = normalizeColor(raw)
+    if (!seen.has(normalized)) {
+      seen.add(normalized)
+      palette.push(raw)
+    }
+  }
+  // Move currentColor to index 0 if present
+  const ccIdx = palette.findIndex((c) => c.toLowerCase() === "currentcolor")
+  if (ccIdx > 0) {
+    const [cc] = palette.splice(ccIdx, 1)
+    palette.unshift(cc)
+  }
+  return palette
+}
+
 // Get all set directories
 const sets = readdirSync(svgDir, { withFileTypes: true })
   .filter((d) => d.isDirectory())
@@ -81,8 +118,12 @@ for (const prefix of sets) {
     }
 
     const escaped = escapeSvg(svg)
+    const palette = extractPalette(svg)
+    const paletteArg = palette.length > 0
+      ? `, ${JSON.stringify(palette)}`
+      : ""
     lines.push(
-      `export const ${componentName} = /*#__PURE__*/ createIcon(\`${escaped}\`, "${componentName}")`
+      `export const ${componentName} = /*#__PURE__*/ createIcon(\`${escaped}\`, "${componentName}"${paletteArg})`
     )
   }
 

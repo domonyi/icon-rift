@@ -14,12 +14,13 @@ export interface IconComponentProps
  *
  * Works in both Server and Client Components.
  */
-export function createIcon(svg: string, displayName: string) {
+export function createIcon(svg: string, displayName: string, palette?: string[]) {
   function IconComponent({
     size,
     width,
     height,
     color,
+    colors,
     stroke,
     strokeWidth,
     absoluteStrokeWidth,
@@ -41,6 +42,7 @@ export function createIcon(svg: string, displayName: string) {
       width,
       height,
       color,
+      colors,
       stroke,
       strokeWidth,
       absoluteStrokeWidth,
@@ -54,7 +56,7 @@ export function createIcon(svg: string, displayName: string) {
       style,
       title,
       viewBox,
-    })
+    }, palette)
 
     const accessible = !!(ariaLabel || title)
 

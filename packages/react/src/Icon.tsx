@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, type HTMLAttributes } from "react"
-import { customizeSvg, type IconCustomizations } from "@iconkit/core"
+import { customizeSvg, extractPalette, type IconCustomizations } from "@iconkit/core"
 import { useIconContext } from "./IconProvider"
 
 export interface IconProps
@@ -28,6 +28,7 @@ export function Icon({
   width,
   height,
   color,
+  colors,
   stroke,
   strokeWidth,
   absoluteStrokeWidth,
@@ -95,6 +96,10 @@ export function Icon({
   }, [set, iconName, svgProp, ctx])
 
   const rawSvg = svgProp ?? loadedSvg
+
+  // Extract palette before early returns (Rules of Hooks)
+  const palette = useMemo(() => (rawSvg ? extractPalette(rawSvg) : []), [rawSvg])
+
   if (error) return null
   if (!rawSvg) return <>{fallback ?? null}</>
 
@@ -103,6 +108,7 @@ export function Icon({
     width,
     height,
     color,
+    colors,
     stroke,
     strokeWidth,
     absoluteStrokeWidth,
@@ -127,7 +133,7 @@ export function Icon({
     }
   }
 
-  const finalSvg = customizeSvg(rawSvg, merged)
+  const finalSvg = customizeSvg(rawSvg, merged, palette)
 
   const accessible = !!(ariaLabel || title)
 

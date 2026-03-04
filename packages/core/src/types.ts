@@ -7,6 +7,8 @@ export interface IconCustomizations {
   height?: number | string
   /** Fill color - replaces currentColor in SVG */
   color?: string
+  /** Positional color overrides — colors[n] replaces the nth unique color in the SVG palette */
+  colors?: string[]
   /** Stroke color */
   stroke?: string
   /** Stroke width */

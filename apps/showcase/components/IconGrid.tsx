@@ -50,9 +50,62 @@ function hasStroke(svg: string): boolean {
   return /stroke=/.test(svg) && /stroke-width=/.test(svg)
 }
 
-function applySvgCustomization(svg: string, c: Customization): string {
+function shouldSkipColor(value: string): boolean {
+  const v = value.trim().toLowerCase()
+  return v === "none" || v === "inherit" || v === "transparent" || v.startsWith("url(")
+}
+
+function normalizeColor(raw: string): string {
+  const c = raw.trim().toLowerCase()
+  const m = c.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i)
+  if (m) return `#${m[1]}${m[1]}${m[2]}${m[2]}${m[3]}${m[3]}`
+  return c
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+function extractPalette(svg: string): string[] {
+  const seen = new Set<string>()
+  const palette: string[] = []
+  const regex = /(?:fill|stroke)\s*=\s*"([^"]*)"/gi
+  let m: RegExpExecArray | null
+  while ((m = regex.exec(svg)) !== null) {
+    const raw = m[1]
+    if (shouldSkipColor(raw)) continue
+    const normalized = normalizeColor(raw)
+    if (!seen.has(normalized)) {
+      seen.add(normalized)
+      palette.push(raw)
+    }
+  }
+  const ccIdx = palette.findIndex((c) => c.toLowerCase() === "currentcolor")
+  if (ccIdx > 0) {
+    const [cc] = palette.splice(ccIdx, 1)
+    palette.unshift(cc)
+  }
+  return palette
+}
+
+function applySvgCustomization(svg: string, c: Customization, colorOverrides?: string[]): string {
   let s = svg
-  s = s.replace(/currentColor/g, c.color)
+
+  if (colorOverrides && colorOverrides.length > 0) {
+    // Multi-color: extract palette and replace positionally
+    const palette = extractPalette(svg)
+    const replacements = palette
+      .map((original, i) => ({ original, replacement: colorOverrides[i] }))
+      .filter((r) => r.replacement !== undefined)
+      .sort((a, b) => b.original.length - a.original.length)
+    for (const { original, replacement } of replacements) {
+      const re = new RegExp(escapeRegex(original), "g")
+      s = s.replace(re, replacement)
+    }
+  } else {
+    s = s.replace(/currentColor/g, c.color)
+  }
+
   if (c.strokeWidth !== null) {
     let sw = c.strokeWidth
     if (c.absoluteStrokeWidth) {
@@ -82,6 +135,15 @@ export function IconGrid({ icons: initialIcons, prefix, total, totalPages, query
   const [selected, setSelected] = useState<IconData | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [custom, setCustom] = useState<Customization>(DEFAULT_CUSTOM)
+  const [globalColors, setGlobalColors] = useState<string[]>([])
+  const [colorOverrides, setColorOverrides] = useState<string[]>([])
+
+  // Extract palette for selected icon
+  const selectedPalette = useMemo(
+    () => (selected ? extractPalette(selected.svg) : []),
+    [selected]
+  )
+  const isMultiColor = selectedPalette.length > 1 || (selectedPalette.length === 1 && selectedPalette[0].toLowerCase() !== "currentcolor")
   const sidebarRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const prefetchCache = useRef<Map<number, IconData[]>>(new Map())
@@ -155,6 +217,7 @@ export function IconGrid({ icons: initialIcons, prefix, total, totalPages, query
     (icon: IconData) => {
       setSelected((prev) => (prev?.name === icon.name ? null : icon))
       setCopied(null)
+      setColorOverrides([])
     },
     []
   )
@@ -170,21 +233,28 @@ export function IconGrid({ icons: initialIcons, prefix, total, totalPages, query
     [selected]
   )
 
+  // Per-icon overrides take precedence over global colors
+  const effectiveColors = colorOverrides.length > 0 ? colorOverrides : globalColors.length > 0 ? globalColors : undefined
+
   const customizedSvg = useMemo(
-    () => (selected ? applySvgCustomization(selected.svg, custom) : ""),
-    [selected, custom]
+    () => (selected ? applySvgCustomization(selected.svg, custom, effectiveColors) : ""),
+    [selected, custom, effectiveColors]
   )
 
   const propsString = useMemo(() => {
     const parts: string[] = [`size={${custom.size}}`]
-    if (custom.color !== "#f5f5f5") parts.push(`color="${custom.color}"`)
+    if (effectiveColors) {
+      parts.push(`colors={${JSON.stringify(effectiveColors)}}`)
+    } else if (custom.color !== "#f5f5f5") {
+      parts.push(`color="${custom.color}"`)
+    }
     if (custom.rotation !== 0) parts.push(`rotate={${custom.rotation}}`)
     if (custom.flipH) parts.push("flipH")
     if (custom.flipV) parts.push("flipV")
     if (custom.strokeWidth !== null && custom.strokeWidth !== 2)
       parts.push(`strokeWidth={${custom.strokeWidth}}`)
     return parts.join(" ")
-  }, [custom])
+  }, [custom, effectiveColors])
 
   // Close selected icon on Escape
   useEffect(() => {
@@ -208,7 +278,7 @@ export function IconGrid({ icons: initialIcons, prefix, total, totalPages, query
         >
           {allIcons.map((icon) => {
             const isActive = selected?.name === icon.name
-            const previewSvg = applySvgCustomization(icon.svg, custom)
+            const previewSvg = applySvgCustomization(icon.svg, custom, globalColors.length > 0 ? globalColors : undefined)
             return (
               <button
                 key={icon.name}
@@ -294,6 +364,8 @@ export function IconGrid({ icons: initialIcons, prefix, total, totalPages, query
             <CustomizePanel
               custom={custom}
               setCustom={setCustom}
+              globalColors={globalColors}
+              setGlobalColors={setGlobalColors}
             />
           </div>
 
@@ -357,6 +429,15 @@ export function IconGrid({ icons: initialIcons, prefix, total, totalPages, query
                     />
                   </div>
                 </div>
+
+                {/* Multi-color palette editor */}
+                {isMultiColor && (
+                  <PaletteEditor
+                    palette={selectedPalette}
+                    overrides={colorOverrides}
+                    onChange={setColorOverrides}
+                  />
+                )}
 
                 {/* Code snippets */}
                 <CodePanel
@@ -452,13 +533,45 @@ function DebouncedColorPicker({
 function CustomizePanel({
   custom,
   setCustom,
+  globalColors,
+  setGlobalColors,
 }: {
   custom: Customization
   setCustom: React.Dispatch<React.SetStateAction<Customization>>
+  globalColors: string[]
+  setGlobalColors: React.Dispatch<React.SetStateAction<string[]>>
 }) {
+  const [activeGlobalSlot, setActiveGlobalSlot] = useState<number | null>(null)
+
   const handleColorChange = useCallback(
     (color: string) => setCustom((c) => ({ ...c, color })),
     [setCustom]
+  )
+
+  const handleAddSlot = useCallback(() => {
+    setGlobalColors((prev) => [...prev, "#6366f1"])
+    setActiveGlobalSlot((prev) => (prev ?? 0) + (globalColors.length > 0 ? 1 : 0))
+  }, [setGlobalColors, globalColors.length])
+
+  const handleRemoveSlot = useCallback(
+    (index: number) => {
+      setGlobalColors((prev) => prev.filter((_, i) => i !== index))
+      setActiveGlobalSlot((prev) =>
+        prev === index ? null : prev !== null && prev > index ? prev - 1 : prev
+      )
+    },
+    [setGlobalColors]
+  )
+
+  const handleSlotColor = useCallback(
+    (index: number, color: string) => {
+      setGlobalColors((prev) => {
+        const next = [...prev]
+        next[index] = color
+        return next
+      })
+    },
+    [setGlobalColors]
   )
 
   return (
@@ -484,13 +597,132 @@ function CustomizePanel({
         </div>
       </ControlGroup>
 
-      {/* Color */}
-      <ControlGroup label="Color" value={custom.color}>
-        <DebouncedColorPicker
-          color={custom.color}
-          onChange={handleColorChange}
-        />
-      </ControlGroup>
+      {/* Color (monotone) */}
+      {globalColors.length === 0 && (
+        <ControlGroup label="Color" value={custom.color}>
+          <DebouncedColorPicker
+            color={custom.color}
+            onChange={handleColorChange}
+          />
+        </ControlGroup>
+      )}
+
+      {/* Multi-color slots */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span
+            className="text-xs font-medium"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            Colors
+          </span>
+          <span
+            className="text-[10px] font-mono"
+            style={{ color: "var(--text-muted)" }}
+          >
+            {globalColors.length === 0
+              ? "monotone"
+              : `${globalColors.length} slot${globalColors.length > 1 ? "s" : ""}`}
+          </span>
+        </div>
+
+        {/* Swatches + add */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {globalColors.map((color, i) => {
+            const isActive = activeGlobalSlot === i
+            return (
+              <button
+                key={i}
+                onClick={() => setActiveGlobalSlot(isActive ? null : i)}
+                className="relative rounded-md transition-all group"
+                style={{
+                  width: 28,
+                  height: 28,
+                  background: color,
+                  outline: isActive
+                    ? "2px solid var(--accent)"
+                    : "1px solid var(--border)",
+                  outlineOffset: isActive ? 1 : 0,
+                }}
+                title={`Slot ${i + 1}: ${color}`}
+              >
+                {/* Remove button on hover */}
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleRemoveSlot(i)
+                  }}
+                  className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full items-center justify-center text-[8px] font-bold hidden group-hover:flex"
+                  style={{
+                    background: "var(--bg-card)",
+                    color: "var(--text-muted)",
+                    border: "1px solid var(--border)",
+                    lineHeight: 1,
+                  }}
+                >
+                  x
+                </span>
+              </button>
+            )
+          })}
+
+          {/* Add slot button */}
+          <button
+            onClick={handleAddSlot}
+            className="flex items-center justify-center rounded-md transition-colors"
+            style={{
+              width: 28,
+              height: 28,
+              background: "var(--bg-card)",
+              border: "1px dashed var(--border)",
+              color: "var(--text-muted)",
+              fontSize: 16,
+              lineHeight: 1,
+            }}
+            title="Add color slot"
+          >
+            +
+          </button>
+        </div>
+
+        {/* Color picker for active global slot */}
+        {activeGlobalSlot !== null && globalColors[activeGlobalSlot] && (
+          <div className="mt-2">
+            <div className="flex items-center justify-between mb-1">
+              <span
+                className="text-[11px] font-mono"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Slot {activeGlobalSlot + 1}
+              </span>
+              <span
+                className="text-[11px] font-mono"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {globalColors[activeGlobalSlot]}
+              </span>
+            </div>
+            <DebouncedColorPicker
+              color={globalColors[activeGlobalSlot]}
+              onChange={(color) => handleSlotColor(activeGlobalSlot, color)}
+            />
+          </div>
+        )}
+
+        {/* Clear all colors */}
+        {globalColors.length > 0 && (
+          <button
+            onClick={() => {
+              setGlobalColors([])
+              setActiveGlobalSlot(null)
+            }}
+            className="mt-2 text-[10px] font-medium px-1.5 py-0.5 rounded"
+            style={{ color: "var(--text-muted)", background: "var(--bg-card)" }}
+          >
+            Clear all colors
+          </button>
+        )}
+      </div>
 
       {/* Stroke width */}
       <ControlGroup label="Stroke Width" value={`${custom.strokeWidth ?? 2}`}>
@@ -554,9 +786,11 @@ function CustomizePanel({
 
       {/* Reset */}
       <button
-        onClick={() =>
+        onClick={() => {
           setCustom(DEFAULT_CUSTOM)
-        }
+          setGlobalColors([])
+          setActiveGlobalSlot(null)
+        }}
         className="w-full py-2 rounded-lg text-xs font-medium transition-colors"
         style={{
           background: "var(--bg-card)",
@@ -594,6 +828,119 @@ function ControlGroup({
         )}
       </div>
       {children}
+    </div>
+  )
+}
+
+/* ─── Palette Editor ─── */
+
+function PaletteEditor({
+  palette,
+  overrides,
+  onChange,
+}: {
+  palette: string[]
+  overrides: string[]
+  onChange: (colors: string[]) => void
+}) {
+  const [activeSlot, setActiveSlot] = useState<number | null>(null)
+
+  const handleSlotColor = useCallback(
+    (index: number, color: string) => {
+      const next = [...overrides]
+      // Ensure array is long enough
+      while (next.length <= index) next.push(palette[next.length])
+      next[index] = color
+      onChange(next)
+    },
+    [overrides, palette, onChange]
+  )
+
+  const handleReset = useCallback(() => {
+    onChange([])
+    setActiveSlot(null)
+  }, [onChange])
+
+  return (
+    <div className="mb-3">
+      <div className="flex items-center justify-between mb-2">
+        <span
+          className="text-xs font-medium"
+          style={{ color: "var(--text-secondary)" }}
+        >
+          Colors ({palette.length})
+        </span>
+        {overrides.length > 0 && (
+          <button
+            onClick={handleReset}
+            className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+            style={{ color: "var(--text-muted)", background: "var(--bg-secondary)" }}
+          >
+            Reset
+          </button>
+        )}
+      </div>
+
+      {/* Color swatches */}
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {palette.map((original, i) => {
+          const current = overrides[i] ?? original
+          const displayColor = original.toLowerCase() === "currentcolor" ? "#f5f5f5" : current
+          const isActive = activeSlot === i
+          return (
+            <button
+              key={i}
+              onClick={() => setActiveSlot(isActive ? null : i)}
+              className="relative rounded-md transition-all"
+              style={{
+                width: 28,
+                height: 28,
+                background: displayColor,
+                outline: isActive
+                  ? "2px solid var(--accent)"
+                  : "1px solid var(--border)",
+                outlineOffset: isActive ? 1 : 0,
+              }}
+              title={`${original}${overrides[i] ? ` → ${overrides[i]}` : ""}`}
+            >
+              {overrides[i] && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+                  style={{ background: "var(--accent)" }}
+                />
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Inline color picker for active slot */}
+      {activeSlot !== null && (
+        <div className="mt-2">
+          <div className="flex items-center justify-between mb-1">
+            <span
+              className="text-[11px] font-mono"
+              style={{ color: "var(--text-muted)" }}
+            >
+              Slot {activeSlot + 1}: {palette[activeSlot]}
+            </span>
+            <span
+              className="text-[11px] font-mono"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {overrides[activeSlot] ?? palette[activeSlot]}
+            </span>
+          </div>
+          <DebouncedColorPicker
+            color={
+              (overrides[activeSlot] ?? palette[activeSlot]).toLowerCase() === "currentcolor"
+                ? "#f5f5f5"
+                : (overrides[activeSlot] ?? palette[activeSlot])
+            }
+            onChange={(color) => handleSlotColor(activeSlot, color)}
+          />
+        </div>
+      )}
     </div>
   )
 }

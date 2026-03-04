@@ -6,6 +6,7 @@ import {
   IconProvider,
   createIcon,
   customizeSvg,
+  extractPalette,
   getSvgBody,
   getSvgAttributes,
   svgToDataUri,
@@ -50,6 +51,7 @@ export function Playground({ samples }: { samples: Sample[] }) {
       <StaticComponentsSection samples={samples} />
       <DynamicIconSection samples={samples} />
       <ProviderDefaultsSection samples={samples} />
+      <MultiColorSection samples={samples} />
       <CustomizeSvgSection samples={samples} />
       <UtilityFunctionsSection samples={samples} />
       <ApiEndpointSection samples={samples} />
@@ -428,7 +430,239 @@ function ProviderDefaultsSection({ samples }: { samples: Sample[] }) {
   )
 }
 
-/* ─── 4. customizeSvg (Core) ─── */
+/* ─── 4. Multi-Color Icons ─── */
+
+function MultiColorSection({ samples }: { samples: Sample[] }) {
+  // Filter to multi-color samples
+  const multiColorSamples = useMemo(
+    () =>
+      samples
+        .map((s) => ({ ...s, palette: extractPalette(s.svg) }))
+        .filter((s) => s.palette.length > 1),
+    [samples]
+  )
+
+  const [selectedIdx, setSelectedIdx] = useState(0)
+  const selected = multiColorSamples[selectedIdx] ?? multiColorSamples[0]
+
+  const [colorOverrides, setColorOverrides] = useState<string[]>([])
+  const [activeSlot, setActiveSlot] = useState<number | null>(null)
+
+  // Reset overrides when icon changes
+  useEffect(() => {
+    setColorOverrides([])
+    setActiveSlot(null)
+  }, [selectedIdx])
+
+  const StaticIcon = useMemo(
+    () => (selected ? createIcon(selected.svg, "MultiColorDemo", selected.palette) : null),
+    [selected]
+  )
+
+  const customizedSvg = useMemo(() => {
+    if (!selected) return ""
+    return customizeSvg(
+      selected.svg,
+      { size: 64, colors: colorOverrides.length > 0 ? colorOverrides : undefined },
+      selected.palette
+    )
+  }, [selected, colorOverrides])
+
+  const handleSlotColor = useCallback(
+    (index: number, color: string) => {
+      setColorOverrides((prev) => {
+        const next = [...prev]
+        while (next.length <= index) next.push(selected.palette[next.length])
+        next[index] = color
+        return next
+      })
+    },
+    [selected]
+  )
+
+  if (multiColorSamples.length === 0) return null
+
+  return (
+    <Section
+      id="multi-color"
+      title="4. Multi-Color Icons (colors prop)"
+      description="Icons with multiple fill colors can be customized per-slot using the colors prop. Each palette position maps to a unique color in the SVG."
+    >
+      {/* Icon selector */}
+      <div className="flex flex-wrap gap-3 mb-5">
+        {multiColorSamples.map((s, i) => (
+          <button
+            key={`${s.set}:${s.name}`}
+            onClick={() => setSelectedIdx(i)}
+            className="flex flex-col items-center gap-1.5 px-3 py-2 rounded-lg transition-all"
+            style={{
+              background: i === selectedIdx ? "var(--accent)" : "var(--bg-secondary)",
+              outline: i === selectedIdx ? "2px solid var(--accent)" : "none",
+            }}
+          >
+            <span
+              className="flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+              style={{ width: 32, height: 32 }}
+              dangerouslySetInnerHTML={{ __html: s.svg }}
+            />
+            <span className="text-[10px] font-mono" style={{ color: i === selectedIdx ? "#fff" : "var(--text-muted)" }}>
+              {s.name}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: palette editor */}
+        <div>
+          <p className="text-xs font-medium mb-2" style={{ color: "var(--text-secondary)" }}>
+            Palette — click a swatch to change its color:
+          </p>
+
+          {/* Swatches */}
+          <div className="flex flex-wrap gap-2 mb-3">
+            {selected.palette.map((color, i) => {
+              const current = colorOverrides[i] ?? color
+              const isActive = activeSlot === i
+              const isModified = !!colorOverrides[i]
+              return (
+                <button
+                  key={i}
+                  onClick={() => setActiveSlot(isActive ? null : i)}
+                  className="relative flex flex-col items-center gap-1"
+                >
+                  <span
+                    className="rounded-lg transition-all"
+                    style={{
+                      width: 36,
+                      height: 36,
+                      background: current,
+                      outline: isActive
+                        ? "2px solid var(--accent)"
+                        : "1px solid var(--border)",
+                      outlineOffset: isActive ? 2 : 0,
+                    }}
+                  />
+                  <span className="text-[9px] font-mono" style={{ color: "var(--text-muted)" }}>
+                    {i + 1}
+                  </span>
+                  {isModified && (
+                    <span
+                      className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border"
+                      style={{ background: "var(--accent)", borderColor: "var(--bg-card)" }}
+                    />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Color picker for active slot */}
+          {activeSlot !== null && (
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-mono" style={{ color: "var(--text-muted)" }}>
+                  Slot {activeSlot + 1}: {selected.palette[activeSlot]}
+                </span>
+                <span className="text-[11px] font-mono" style={{ color: "var(--text-muted)" }}>
+                  {colorOverrides[activeSlot] ? `\u2192 ${colorOverrides[activeSlot]}` : "original"}
+                </span>
+              </div>
+              <input
+                type="color"
+                value={colorOverrides[activeSlot] ?? selected.palette[activeSlot]}
+                onChange={(e) => handleSlotColor(activeSlot, e.target.value)}
+                className="w-full h-10 rounded cursor-pointer border-0"
+              />
+            </div>
+          )}
+
+          {/* Reset */}
+          {colorOverrides.length > 0 && (
+            <button
+              onClick={() => { setColorOverrides([]); setActiveSlot(null) }}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+              style={{
+                background: "var(--bg-secondary)",
+                color: "var(--text-secondary)",
+                border: "1px solid var(--border)",
+              }}
+            >
+              Reset colors
+            </button>
+          )}
+
+          {/* Code snippet */}
+          <div className="mt-4">
+            <p className="text-xs font-medium mb-1" style={{ color: "var(--text-secondary)" }}>
+              Usage:
+            </p>
+            <pre
+              className="text-[11px] font-mono p-3 rounded-lg overflow-x-auto"
+              style={{ background: "var(--bg-secondary)", color: "var(--text-muted)" }}
+            >
+              {colorOverrides.length > 0
+                ? `<Icon name="${selected.set}:${selected.name}" colors={${JSON.stringify(colorOverrides)}} />`
+                : `<Icon name="${selected.set}:${selected.name}" />`}
+            </pre>
+          </div>
+        </div>
+
+        {/* Right: preview */}
+        <div>
+          <p className="text-xs font-medium mb-2" style={{ color: "var(--text-secondary)" }}>
+            Preview:
+          </p>
+          <div
+            className="flex items-center justify-center rounded-xl border checkerboard mb-3"
+            style={{ borderColor: "var(--border)", height: 140 }}
+          >
+            <span dangerouslySetInnerHTML={{ __html: customizedSvg }} />
+          </div>
+
+          {/* Show with createIcon + colors prop */}
+          {StaticIcon && (
+            <div>
+              <p className="text-xs font-medium mb-2" style={{ color: "var(--text-secondary)" }}>
+                createIcon with colors prop:
+              </p>
+              <div className="flex items-center gap-4">
+                <StaticIcon size={48} />
+                <StaticIcon
+                  size={48}
+                  colors={colorOverrides.length > 0 ? colorOverrides : undefined}
+                />
+                {selected.palette.length >= 2 && (
+                  <StaticIcon
+                    size={48}
+                    colors={[selected.palette[1], selected.palette[0], ...selected.palette.slice(2)]}
+                  />
+                )}
+              </div>
+              <div className="flex gap-4 mt-1">
+                <span className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>
+                  Original
+                </span>
+                <span className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>
+                  {colorOverrides.length > 0 ? "Custom" : "Original"}
+                </span>
+                {selected.palette.length >= 2 && (
+                  <span className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>
+                    Swapped 1&2
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </Section>
+  )
+}
+
+/* ─── 5. customizeSvg (Core) ─── */
+
+// Section numbering: 5 = customizeSvg, 6 = Utilities, 7 = API
 
 function CustomizeSvgSection({ samples }: { samples: Sample[] }) {
   const sample = samples[0]
@@ -455,7 +689,7 @@ function CustomizeSvgSection({ samples }: { samples: Sample[] }) {
   return (
     <Section
       id="customize-svg"
-      title="4. customizeSvg (Core Function)"
+      title="5. customizeSvg (Core Function)"
       description="The core SVG manipulation function. Modifies raw SVG strings with size, color, rotation, flip, and opacity."
     >
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -597,7 +831,7 @@ function UtilityFunctionsSection({ samples }: { samples: Sample[] }) {
   return (
     <Section
       id="utilities"
-      title="5. Utility Functions"
+      title="6. Utility Functions"
       description="Core helpers for extracting SVG data, generating data URIs, and base64 encoding."
     >
       <div className="space-y-4">
@@ -724,7 +958,7 @@ function ApiEndpointSection({ samples }: { samples: Sample[] }) {
   return (
     <Section
       id="api"
-      title="6. API Endpoint"
+      title="7. API Endpoint"
       description="REST API at /api/icons/[set]/[name] — serves SVGs with query-based customization and long-term caching."
     >
       {/* Controls */}
