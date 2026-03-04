@@ -1,0 +1,43 @@
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.organizeImports": "explicit",
+    "source.sortMembers": "explicit"
+  },
+  "workbench.editor.openSideBySideDirection": "right",
+  "workbench.editor.closeEmptyGroups": true,
+  "auto-run-command.rules": [
+    {
+      "condition": "always",
+      "command": "claude-vscode.terminal.open"
+    },
+    {
+      "condition": "always",
+      "command": "workbench.action.closeEditorsInOtherGroups"
+    },
+    {
+      "condition": "always",
+      "command": "workbench.action.splitEditorRight"
+    },
+    {
+      "condition": "always",
+      "command": "workbench.action.decreaseViewWidth"
+    },
+    {
+      "condition": "always",
+      "command": "workbench.action.decreaseViewWidth"
+    },
+    {
+      "condition": "always",
+      "command": "workbench.action.decreaseViewWidth"
+    },
+    {
+      "condition": "always",
+      "command": "workbench.action.decreaseViewWidth"
+    },
+    {
+      "condition": "always",
+      "command": "workbench.action.decreaseViewWidth"
+    }
+  ]
+}

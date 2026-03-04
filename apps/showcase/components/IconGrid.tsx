@@ -1,10 +1,19 @@
 "use client"
 
 import { useState, useCallback, useMemo, useRef, useEffect } from "react"
+import { HexColorPicker } from "react-colorful"
+
+interface IconData {
+  name: string
+  svg: string
+}
 
 interface IconGridProps {
-  icons: Array<{ name: string; svg: string }>
+  icons: IconData[]
   prefix: string
+  total: number
+  totalPages: number
+  query?: string
 }
 
 interface Customization {
@@ -14,6 +23,7 @@ interface Customization {
   flipH: boolean
   flipV: boolean
   strokeWidth: number | null
+  absoluteStrokeWidth: boolean
 }
 
 const DEFAULT_CUSTOM: Customization = {
@@ -22,19 +32,9 @@ const DEFAULT_CUSTOM: Customization = {
   rotation: 0,
   flipH: false,
   flipV: false,
-  strokeWidth: null,
+  strokeWidth: 2,
+  absoluteStrokeWidth: false,
 }
-
-const PRESET_COLORS = [
-  "#f5f5f5",
-  "#6366f1",
-  "#ec4899",
-  "#f59e0b",
-  "#10b981",
-  "#3b82f6",
-  "#ef4444",
-  "#8b5cf6",
-]
 
 function toPascalCase(name: string): string {
   const parts = name.split(/[-_.\s]+/).filter(Boolean)
@@ -54,7 +54,12 @@ function applySvgCustomization(svg: string, c: Customization): string {
   let s = svg
   s = s.replace(/currentColor/g, c.color)
   if (c.strokeWidth !== null) {
-    s = s.replace(/stroke-width="[^"]*"/g, `stroke-width="${c.strokeWidth}"`)
+    let sw = c.strokeWidth
+    if (c.absoluteStrokeWidth) {
+      const viewBox = 24
+      sw = sw * viewBox / c.size
+    }
+    s = s.replace(/stroke-width="[^"]*"/g, `stroke-width="${sw}"`)
   }
   const transforms: string[] = []
   if (c.rotation !== 0) transforms.push(`rotate(${c.rotation})`)
@@ -70,25 +75,89 @@ function applySvgCustomization(svg: string, c: Customization): string {
   return s
 }
 
-export function IconGrid({ icons, prefix }: IconGridProps) {
-  const [selected, setSelected] = useState<{
-    name: string
-    svg: string
-  } | null>(null)
+export function IconGrid({ icons: initialIcons, prefix, total, totalPages, query }: IconGridProps) {
+  const [allIcons, setAllIcons] = useState<IconData[]>(initialIcons)
+  const [page, setPage] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const [selected, setSelected] = useState<IconData | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [custom, setCustom] = useState<Customization>(DEFAULT_CUSTOM)
-  const [tab, setTab] = useState<"customize" | "code">("customize")
   const sidebarRef = useRef<HTMLDivElement>(null)
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const prefetchCache = useRef<Map<number, IconData[]>>(new Map())
 
-  const handleSelect = useCallback((icon: { name: string; svg: string }) => {
-    setSelected(icon)
-    setCustom({
-      ...DEFAULT_CUSTOM,
-      strokeWidth: hasStroke(icon.svg) ? 2 : null,
-    })
-    setTab("customize")
-    setCopied(null)
-  }, [])
+  const hasMore = page < totalPages
+
+  // Build fetch URL for a page
+  const buildPageUrl = useCallback(
+    (p: number) => {
+      const params = new URLSearchParams({ page: String(p) })
+      if (query) params.set("q", query)
+      return `/api/icons/${prefix}?${params}`
+    },
+    [prefix, query]
+  )
+
+  // Reset when initial icons change (e.g. search query changes)
+  useEffect(() => {
+    setAllIcons(initialIcons)
+    setPage(1)
+    setSelected(null)
+    prefetchCache.current.clear()
+  }, [initialIcons])
+
+  // Prefetch the next page eagerly
+  useEffect(() => {
+    if (!hasMore) return
+    const nextPage = page + 1
+    if (prefetchCache.current.has(nextPage)) return
+    fetch(buildPageUrl(nextPage))
+      .then((r) => r.json())
+      .then((data: { icons: IconData[] }) => {
+        prefetchCache.current.set(nextPage, data.icons)
+      })
+  }, [page, hasMore, buildPageUrl])
+
+  // Infinite scroll — append next page when sentinel is visible
+  useEffect(() => {
+    if (!hasMore || loading) return
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          const nextPage = page + 1
+          const cached = prefetchCache.current.get(nextPage)
+          if (cached) {
+            setAllIcons((prev) => [...prev, ...cached])
+            setPage(nextPage)
+          } else {
+            setLoading(true)
+            fetch(buildPageUrl(nextPage))
+              .then((r) => r.json())
+              .then((data: { icons: IconData[] }) => {
+                setAllIcons((prev) => [...prev, ...data.icons])
+                setPage(nextPage)
+              })
+              .finally(() => setLoading(false))
+          }
+        }
+      },
+      { rootMargin: "800px" }
+    )
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [hasMore, loading, page, buildPageUrl])
+
+  const handleSelect = useCallback(
+    (icon: IconData) => {
+      setSelected((prev) => (prev?.name === icon.name ? null : icon))
+      setCopied(null)
+    },
+    []
+  )
 
   const copyToClipboard = useCallback(async (text: string, label: string) => {
     await navigator.clipboard.writeText(text)
@@ -117,7 +186,7 @@ export function IconGrid({ icons, prefix }: IconGridProps) {
     return parts.join(" ")
   }, [custom])
 
-  // Close on Escape
+  // Close selected icon on Escape
   useEffect(() => {
     if (!selected) return
     const handler = (e: KeyboardEvent) => {
@@ -128,20 +197,18 @@ export function IconGrid({ icons, prefix }: IconGridProps) {
   }, [selected])
 
   return (
-    <>
-      {/* Grid — shrinks when sidebar is open */}
-      <div
-        className="transition-[margin] duration-300 ease-in-out"
-        style={{ marginRight: selected ? 380 : 0 }}
-      >
+    <div className="flex gap-6">
+      {/* Grid — takes remaining space */}
+      <div className="flex-1 min-w-0">
         <div
           className="grid gap-3"
           style={{
-            gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))",
+            gridTemplateColumns: `repeat(auto-fill, minmax(${Math.max(custom.size + 24, 72)}px, 1fr))`,
           }}
         >
-          {icons.map((icon) => {
+          {allIcons.map((icon) => {
             const isActive = selected?.name === icon.name
+            const previewSvg = applySvgCustomization(icon.svg, custom)
             return (
               <button
                 key={icon.name}
@@ -156,117 +223,142 @@ export function IconGrid({ icons, prefix }: IconGridProps) {
                 title={icon.name}
               >
                 <span
-                  className="w-10 h-10 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+                  className="flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
                   style={{
-                    color: isActive ? "#fff" : "var(--text-primary)",
+                    width: custom.size,
+                    height: custom.size,
+                    color: isActive ? "#fff" : undefined,
+                    transition: "width 0.15s, height 0.15s",
                   }}
-                  dangerouslySetInnerHTML={{ __html: icon.svg }}
+                  dangerouslySetInnerHTML={{ __html: previewSvg }}
                 />
               </button>
             )
           })}
         </div>
+
+        {/* Scroll sentinel */}
+        {hasMore && (
+          <div ref={sentinelRef} className="flex justify-center py-8">
+            {loading && (
+              <span
+                className="text-sm"
+                style={{ color: "var(--text-muted)" }}
+              >
+                Loading more icons...
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Count */}
+        {!hasMore && allIcons.length > 0 && (
+          <p
+            className="text-center text-xs py-6"
+            style={{ color: "var(--text-muted)" }}
+          >
+            {total.toLocaleString()} icons
+          </p>
+        )}
       </div>
 
-      {/* Sidebar */}
+      {/* Always-visible sidebar */}
       <div
         ref={sidebarRef}
-        className="fixed top-0 right-0 h-full z-40 transition-transform duration-300 ease-in-out"
-        style={{
-          width: 380,
-          transform: selected ? "translateX(0)" : "translateX(100%)",
-          background: "var(--bg-secondary)",
-          borderLeft: "1px solid var(--border)",
-        }}
+        className="shrink-0 hidden lg:block"
+        style={{ width: 300 }}
       >
-        {selected && (
-          <div className="h-full flex flex-col">
-            {/* Sidebar header + close */}
-            <div
-              className="flex items-center justify-between px-5 py-4 shrink-0 border-b"
-              style={{ borderColor: "var(--border)" }}
+        <div
+          className="sticky top-4 rounded-xl border overflow-hidden"
+          style={{
+            background: "var(--bg-secondary)",
+            borderColor: "var(--border)",
+          }}
+        >
+          {/* Sidebar header */}
+          <div
+            className="px-5 py-4 border-b"
+            style={{ borderColor: "var(--border)" }}
+          >
+            <h3 className="text-sm font-semibold">Customize All</h3>
+            <p
+              className="text-xs mt-0.5"
+              style={{ color: "var(--text-muted)" }}
             >
-              <div className="min-w-0">
-                <h3 className="text-sm font-semibold truncate">
-                  {componentName}
-                </h3>
-                <p
-                  className="text-xs font-mono truncate"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  {prefix}:{selected.name}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelected(null)}
-                className="p-1.5 rounded-lg transition-colors hover:bg-white/10 shrink-0 ml-3"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
+              Changes apply to every icon
+            </p>
+          </div>
 
-            {/* Live preview */}
-            <div className="flex items-center justify-center px-5 py-6 shrink-0">
+          {/* Customization controls */}
+          <div className="px-5 py-4">
+            <CustomizePanel
+              custom={custom}
+              setCustom={setCustom}
+            />
+          </div>
+
+          {/* Selected icon detail */}
+          {selected && (
+            <>
               <div
-                className="flex items-center justify-center rounded-xl border checkerboard"
-                style={{
-                  width: Math.max(custom.size + 48, 96),
-                  height: Math.max(custom.size + 48, 96),
-                  borderColor: "var(--border)",
-                  transition: "width 0.2s, height 0.2s",
-                }}
+                className="border-t px-5 py-4"
+                style={{ borderColor: "var(--border)" }}
               >
-                <span
-                  className="flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
-                  style={{
-                    width: custom.size,
-                    height: custom.size,
-                    transition: "width 0.2s, height 0.2s",
-                  }}
-                  dangerouslySetInnerHTML={{ __html: customizedSvg }}
-                />
-              </div>
-            </div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-semibold truncate">
+                      {componentName}
+                    </h4>
+                    <p
+                      className="text-[11px] font-mono truncate"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      {prefix}:{selected.name}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelected(null)}
+                    className="p-1 rounded-lg transition-colors hover:bg-white/10 shrink-0 ml-2"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                </div>
 
-            {/* Tab switcher */}
-            <div
-              className="flex border-b mx-5 shrink-0"
-              style={{ borderColor: "var(--border)" }}
-            >
-              <TabButton
-                active={tab === "customize"}
-                onClick={() => setTab("customize")}
-              >
-                Customize
-              </TabButton>
-              <TabButton
-                active={tab === "code"}
-                onClick={() => setTab("code")}
-              >
-                Code
-              </TabButton>
-            </div>
+                {/* Preview */}
+                <div className="flex items-center justify-center mb-3">
+                  <div
+                    className="flex items-center justify-center rounded-lg border checkerboard"
+                    style={{
+                      width: Math.max(custom.size + 32, 72),
+                      height: Math.max(custom.size + 32, 72),
+                      borderColor: "var(--border)",
+                      transition: "width 0.2s, height 0.2s",
+                    }}
+                  >
+                    <span
+                      className="flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+                      style={{
+                        width: custom.size,
+                        height: custom.size,
+                        transition: "width 0.2s, height 0.2s",
+                      }}
+                      dangerouslySetInnerHTML={{ __html: customizedSvg }}
+                    />
+                  </div>
+                </div>
 
-            {/* Tab content — scrollable */}
-            <div className="flex-1 overflow-y-auto px-5 py-4">
-              {tab === "customize" ? (
-                <CustomizePanel
-                  custom={custom}
-                  setCustom={setCustom}
-                  showStroke={hasStroke(selected.svg)}
-                />
-              ) : (
+                {/* Code snippets */}
                 <CodePanel
                   componentName={componentName}
                   prefix={prefix}
@@ -277,12 +369,12 @@ export function IconGrid({ icons, prefix }: IconGridProps) {
                   onCopy={copyToClipboard}
                   custom={custom}
                 />
-              )}
-            </div>
-          </div>
-        )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
-    </>
+    </div>
   )
 }
 
@@ -318,16 +410,56 @@ function TabButton({
 
 /* ─── Customize Panel ─── */
 
+function DebouncedColorPicker({
+  color,
+  onChange,
+}: {
+  color: string
+  onChange: (color: string) => void
+}) {
+  const [localColor, setLocalColor] = useState(color)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null)
+
+  // Sync from parent when it changes externally (e.g. reset)
+  useEffect(() => {
+    setLocalColor(color)
+  }, [color])
+
+  const handleChange = useCallback(
+    (newColor: string) => {
+      setLocalColor(newColor)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(() => onChange(newColor), 16)
+    },
+    [onChange]
+  )
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
+
+  return (
+    <HexColorPicker
+      color={localColor}
+      onChange={handleChange}
+      style={{ width: "100%" }}
+    />
+  )
+}
+
 function CustomizePanel({
   custom,
   setCustom,
-  showStroke,
 }: {
   custom: Customization
   setCustom: React.Dispatch<React.SetStateAction<Customization>>
-  showStroke: boolean
 }) {
-  const colorInputRef = useRef<HTMLInputElement>(null)
+  const handleColorChange = useCallback(
+    (color: string) => setCustom((c) => ({ ...c, color })),
+    [setCustom]
+  )
 
   return (
     <div className="space-y-5">
@@ -354,126 +486,76 @@ function CustomizePanel({
 
       {/* Color */}
       <ControlGroup label="Color" value={custom.color}>
-        <div className="flex items-center gap-2 flex-wrap">
-          {PRESET_COLORS.map((c) => (
-            <button
-              key={c}
-              onClick={() => setCustom((prev) => ({ ...prev, color: c }))}
-              className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
-              style={{
-                background: c,
-                borderColor:
-                  custom.color === c ? "var(--accent)" : "transparent",
-              }}
-            />
-          ))}
-          <button
-            onClick={() => colorInputRef.current?.click()}
-            className="w-7 h-7 rounded-full border-2 border-dashed flex items-center justify-center text-xs transition-transform hover:scale-110"
-            style={{
-              borderColor: "var(--border-hover)",
-              color: "var(--text-muted)",
-            }}
-            title="Custom color"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
-          <input
-            ref={colorInputRef}
-            type="color"
-            value={custom.color}
-            onChange={(e) =>
-              setCustom((c) => ({ ...c, color: e.target.value }))
-            }
-            className="sr-only"
-          />
-        </div>
-      </ControlGroup>
-
-      {/* Rotation */}
-      <ControlGroup label="Rotation" value={`${custom.rotation}\u00B0`}>
-        <div className="flex gap-2">
-          {[0, 90, 180, 270].map((deg) => (
-            <button
-              key={deg}
-              onClick={() => setCustom((c) => ({ ...c, rotation: deg }))}
-              className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors"
-              style={{
-                background:
-                  custom.rotation === deg ? "var(--accent)" : "var(--bg-card)",
-                color:
-                  custom.rotation === deg ? "#fff" : "var(--text-secondary)",
-                border: `1px solid ${custom.rotation === deg ? "var(--accent)" : "var(--border)"}`,
-              }}
-            >
-              {deg}&deg;
-            </button>
-          ))}
-        </div>
-      </ControlGroup>
-
-      {/* Flip */}
-      <ControlGroup label="Flip">
-        <div className="flex gap-2">
-          <ToggleButton
-            active={custom.flipH}
-            onClick={() => setCustom((c) => ({ ...c, flipH: !c.flipH }))}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="3" x2="12" y2="21" />
-              <polyline points="7 8 3 12 7 16" />
-              <polyline points="17 8 21 12 17 16" />
-            </svg>
-            Horizontal
-          </ToggleButton>
-          <ToggleButton
-            active={custom.flipV}
-            onClick={() => setCustom((c) => ({ ...c, flipV: !c.flipV }))}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <polyline points="8 7 12 3 16 7" />
-              <polyline points="8 17 12 21 16 17" />
-            </svg>
-            Vertical
-          </ToggleButton>
-        </div>
+        <DebouncedColorPicker
+          color={custom.color}
+          onChange={handleColorChange}
+        />
       </ControlGroup>
 
       {/* Stroke width */}
-      {showStroke && custom.strokeWidth !== null && (
-        <ControlGroup label="Stroke Width" value={`${custom.strokeWidth}`}>
-          <input
-            type="range"
-            min={0.5}
-            max={4}
-            step={0.25}
-            value={custom.strokeWidth}
-            onChange={(e) =>
-              setCustom((c) => ({ ...c, strokeWidth: Number(e.target.value) }))
-            }
-            className="slider w-full"
-          />
-          <div
-            className="flex justify-between text-[10px] mt-1"
-            style={{ color: "var(--text-muted)" }}
+      <ControlGroup label="Stroke Width" value={`${custom.strokeWidth ?? 2}`}>
+        <input
+          type="range"
+          min={0.5}
+          max={4}
+          step={0.25}
+          value={custom.strokeWidth ?? 2}
+          onChange={(e) =>
+            setCustom((c) => ({
+              ...c,
+              strokeWidth: Number(e.target.value),
+            }))
+          }
+          className="slider w-full"
+        />
+        <div
+          className="flex justify-between text-[10px] mt-1"
+          style={{ color: "var(--text-muted)" }}
+        >
+          <span>0.5</span>
+          <span>4</span>
+        </div>
+      </ControlGroup>
+
+      {/* Absolute stroke width */}
+      <div className="flex items-center justify-between">
+          <span
+            className="text-xs font-medium"
+            style={{ color: "var(--text-secondary)" }}
           >
-            <span>0.5</span>
-            <span>4</span>
-          </div>
-        </ControlGroup>
-      )}
+            Absolute Stroke Width
+          </span>
+          <button
+            onClick={() =>
+              setCustom((c) => ({
+                ...c,
+                absoluteStrokeWidth: !c.absoluteStrokeWidth,
+              }))
+            }
+            className="relative w-9 h-5 rounded-full transition-colors"
+            style={{
+              background: custom.absoluteStrokeWidth
+                ? "var(--accent)"
+                : "var(--bg-card)",
+              border: `1px solid ${custom.absoluteStrokeWidth ? "var(--accent)" : "var(--border)"}`,
+            }}
+          >
+            <span
+              className="absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full transition-transform"
+              style={{
+                background: "#fff",
+                transform: custom.absoluteStrokeWidth
+                  ? "translateX(16px)"
+                  : "translateX(0)",
+              }}
+            />
+          </button>
+        </div>
 
       {/* Reset */}
       <button
         onClick={() =>
-          setCustom({
-            ...DEFAULT_CUSTOM,
-            strokeWidth: showStroke ? 2 : null,
-          })
+          setCustom(DEFAULT_CUSTOM)
         }
         className="w-full py-2 rounded-lg text-xs font-medium transition-colors"
         style={{
@@ -513,32 +595,6 @@ function ControlGroup({
       </div>
       {children}
     </div>
-  )
-}
-
-/* ─── Toggle Button ─── */
-
-function ToggleButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean
-  onClick: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-colors"
-      style={{
-        background: active ? "var(--accent)" : "var(--bg-card)",
-        color: active ? "#fff" : "var(--text-secondary)",
-        border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-      }}
-    >
-      {children}
-    </button>
   )
 }
 

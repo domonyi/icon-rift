@@ -4,7 +4,6 @@ import { Suspense } from "react"
 import { getCollection, getIconsPage } from "@/lib/icons"
 import { SearchBar } from "@/components/SearchBar"
 import { IconGrid } from "@/components/IconGrid"
-import { Pagination } from "@/components/Pagination"
 
 const PER_PAGE = 200
 
@@ -16,13 +15,12 @@ export default async function SetPage({
   searchParams: Promise<{ page?: string; q?: string }>
 }) {
   const { prefix } = await params
-  const { page: pageParam, q } = await searchParams
+  const { q } = await searchParams
 
   const collection = getCollection(prefix)
   if (!collection) notFound()
 
-  const page = Math.max(1, Number(pageParam) || 1)
-  const { icons, total, totalPages } = getIconsPage(prefix, page, PER_PAGE, q)
+  const { icons, total, totalPages } = getIconsPage(prefix, 1, PER_PAGE, q)
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -103,18 +101,15 @@ export default async function SetPage({
           {total} result{total !== 1 ? "s" : ""} for &ldquo;{q}&rdquo;
         </p>
       )}
-      {!q && totalPages > 1 && (
-        <p
-          className="text-sm mb-4"
-          style={{ color: "var(--text-muted)" }}
-        >
-          Page {page} of {totalPages} &middot; Showing{" "}
-          {Math.min(PER_PAGE, total)} of {total.toLocaleString()} icons
-        </p>
-      )}
 
-      {/* Icon grid */}
-      <IconGrid icons={icons} prefix={prefix} />
+      {/* Icon grid with infinite scroll */}
+      <IconGrid
+        icons={icons}
+        prefix={prefix}
+        total={total}
+        totalPages={totalPages}
+        query={q}
+      />
 
       {icons.length === 0 && (
         <div className="text-center py-20">
@@ -123,11 +118,6 @@ export default async function SetPage({
           </p>
         </div>
       )}
-
-      {/* Pagination */}
-      <Suspense>
-        <Pagination page={page} totalPages={totalPages} />
-      </Suspense>
     </div>
   )
 }

@@ -3,23 +3,24 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack -p 4444",
     "build": "next build",
     "start": "next start"
   },
   "dependencies": {
+    "@iconkit/core": "*",
+    "@iconkit/react": "*",
     "next": "^15",
     "react": "^19",
-    "react-dom": "^19",
-    "@iconkit/core": "*",
-    "@iconkit/react": "*"
+    "react-colorful": "^5.6.1",
+    "react-dom": "^19"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
-    "@tailwindcss/postcss": "^4"
+    "typescript": "^5"
   }
 }
