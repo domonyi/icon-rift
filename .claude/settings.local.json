@@ -33,7 +33,6 @@
       "Bash(wget * | bash)",
       "Bash(mkfs*)",
       "Bash(dd if=*)",
-      "Bash(:(){:|:&};:)",
       "Bash(shutdown*)",
       "Bash(reboot*)"
     ],
