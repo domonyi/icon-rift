@@ -78,7 +78,7 @@ export function CardActions({
     >
       <div className="flex items-center gap-0.5">
         <button onClick={copyImport} className="hover-icon p-1.5 rounded-md cursor-pointer" title={copied ? "Copied!" : "Copy import"}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={copied ? "var(--accent)" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={copied ? "var(--accent)" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             {copied ? (
               <polyline points="20 6 9 17 4 12" />
             ) : (
@@ -87,13 +87,13 @@ export function CardActions({
           </svg>
         </button>
         <button onClick={toggleFavorite} className="hover-icon p-1.5 rounded-md cursor-pointer" title={favorited ? "Remove from favorites" : "Add to favorites"}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill={favorited ? "var(--accent)" : "none"} stroke={favorited ? "var(--accent)" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill={favorited ? "var(--accent)" : "none"} stroke={favorited ? "var(--accent)" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
         </button>
         <div className="relative" ref={popoverRef}>
           <button ref={btnRef} onClick={toggleInfo} className="hover-icon p-1.5 rounded-md cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={showInfo ? "var(--accent)" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showInfo ? "var(--accent)" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
             </svg>
           </button>

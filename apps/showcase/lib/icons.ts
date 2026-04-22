@@ -1,6 +1,7 @@
 import fs from "fs"
 import path from "path"
 import type { IconSetMeta } from "@iconrift/core"
+import { collections as allCollections } from "@iconrift/meta"
 
 function findRootDir(): string {
   let dir = process.cwd()
@@ -13,61 +14,25 @@ function findRootDir(): string {
 
 const ROOT = findRootDir()
 const SVG_DIR = path.join(ROOT, "svg")
-const COLLECTIONS_PATH = path.join(
-  ROOT,
-  "node_modules",
-  "@iconify",
-  "json",
-  "collections.json"
-)
-
-// Cache for collections metadata
-let collectionsRaw: Record<string, Record<string, unknown>> | null = null
-
-function loadCollectionsRaw(): Record<string, Record<string, unknown>> {
-  if (!collectionsRaw) {
-    collectionsRaw = JSON.parse(fs.readFileSync(COLLECTIONS_PATH, "utf8"))
-  }
-  return collectionsRaw!
-}
 
 // Cache for icon name lists per set
 const iconNamesCache = new Map<string, string[]>()
 
-// Cache for parsed collections
-let collectionsCache: IconSetMeta[] | null = null
-let collectionsByPrefix: Map<string, IconSetMeta> | null = null
+// Cache for collections by prefix
+const collectionsByPrefix = new Map(allCollections.map((c) => [c.prefix, c]))
 
 /**
  * Get metadata for all icon sets.
  */
 export function getCollections(): IconSetMeta[] {
-  if (collectionsCache) return collectionsCache
-  const raw = loadCollectionsRaw()
-  collectionsCache = Object.entries(raw).map(([prefix, meta]) => ({
-    prefix,
-    name: (meta.name as string) || prefix,
-    total: (meta.total as number) || 0,
-    author: (meta.author as { name: string; url?: string }) || { name: "Unknown" },
-    license: (meta.license as { title: string; spdx: string }) || {
-      title: "Unknown",
-      spdx: "Unknown",
-    },
-    category: (meta.category as string) || "General",
-    height: (meta.height as number | number[]) || 24,
-    palette: (meta.palette as boolean) || false,
-    samples: (meta.samples as string[]) || [],
-  }))
-  collectionsByPrefix = new Map(collectionsCache.map((c) => [c.prefix, c]))
-  return collectionsCache
+  return allCollections
 }
 
 /**
  * Get metadata for a single icon set.
  */
 export function getCollection(prefix: string): IconSetMeta | null {
-  if (!collectionsByPrefix) getCollections()
-  return collectionsByPrefix!.get(prefix) ?? null
+  return collectionsByPrefix.get(prefix) ?? null
 }
 
 /**

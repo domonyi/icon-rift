@@ -217,10 +217,7 @@ export default async function HomePage({
                       </span>
                       <div className="flex-1 border-t" style={{ borderColor: "var(--border)" }} />
                     </div>
-                    <div
-                      className="grid gap-4"
-                      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}
-                    >
+                    <div className="card-grid grid">
                       {items.map((col) => (
                         <IconSetCard key={col.prefix} collection={col} />
                       ))}
@@ -231,10 +228,7 @@ export default async function HomePage({
             </div>
           ) : (
             // Flat grid when filtered by category or search
-            <div
-              className="grid gap-4 max-w-[1400px] mx-auto"
-              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}
-            >
+            <div className="card-grid grid max-w-[1400px] mx-auto">
               {filtered.map((col) => (
                 <IconSetCard key={col.prefix} collection={col} />
               ))}
@@ -257,7 +251,7 @@ function IconSetCard({
 }: {
   collection: ReturnType<typeof getCollections>[number]
 }) {
-  const samples = getSampleIcons(collection.prefix, 4)
+  const samples = getSampleIcons(collection.prefix, 8)
 
   return (
     <Link
@@ -269,16 +263,16 @@ function IconSetCard({
       }}
     >
       {/* Icon display area */}
-      <div className="flex items-center justify-center gap-3 py-7 px-4">
+      <div className="card-icons flex items-center justify-center">
         {samples.length > 0 ? (
-          samples.map((icon) => (
+          samples.map((icon, i) => (
             <span
               key={icon.name}
-              className="flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
-              style={{ width: 28, height: 28 }}
+              className="card-icon flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+              data-index={i}
               dangerouslySetInnerHTML={{
                 __html: customizeSvg(icon.svg, {
-                  size: 28,
+                  size: 32,
                   color: "var(--text-primary)",
                 }),
               }}
