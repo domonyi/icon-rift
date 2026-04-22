@@ -39,7 +39,7 @@ function escapeSvg(svg) {
   return svg.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\${/g, "\\${")
 }
 
-// --- Palette extraction (mirrors @iconkit/core extractPalette) ---
+// --- Palette extraction (mirrors @iconrift/core extractPalette) ---
 
 function shouldSkipColor(value) {
   const v = value.trim().toLowerCase()

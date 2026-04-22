@@ -1,8 +1,8 @@
 "use client";
 
-import { Icon, IconProvider } from "@iconkit/react";
-import { FlagPride16Filled } from "@iconkit/react/fluent";
-import { Icon3dCoordinateAxis } from "@iconkit/react/streamline-plump-color";
+import { Icon, IconProvider } from "@iconrift/react";
+import { FlagPride16Filled } from "@iconrift/react/fluent";
+import { Icon3dCoordinateAxis } from "@iconrift/react/streamline-plump-color";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -19,13 +19,13 @@ import {
   Shield,
   User,
   Zap,
-} from "@iconkit/react/lucide";
+} from "@iconrift/react/lucide";
 import {
   LanguageTypescript,
   Heart as MdiHeart,
   Star as MdiStar,
-} from "@iconkit/react/mdi";
-import { PackageBold } from "@iconkit/react/ph";
+} from "@iconrift/react/mdi";
+import { PackageBold } from "@iconrift/react/ph";
 
 // Multi-color icon set
 
@@ -52,7 +52,7 @@ export default function SandboxPage() {
 
       <header className="mb-10">
         <h1 className="text-3xl font-bold tracking-tight mb-1">
-          <span style={{ color: "var(--accent)" }}>IconKit</span> Sandbox
+          <span style={{ color: "var(--accent)" }}>IconRift</span> Sandbox
         </h1>
         <p style={{ color: "var(--text-secondary)" }} className="text-sm">
           Real-world usage examples — test icons exactly like you would in your
@@ -82,7 +82,7 @@ function NavbarExample() {
   return (
     <ExampleSection
       title="Navbar"
-      code={`import { Home, Bell, User, Search, Menu, ChevronDown } from "@iconkit/react/lucide"
+      code={`import { Home, Bell, User, Search, Menu, ChevronDown } from "@iconrift/react/lucide"
 
 <Menu size={20} />
 <Search size={14} />
@@ -148,8 +148,8 @@ function ButtonsExample() {
   return (
     <ExampleSection
       title="Buttons with Icons"
-      code={`import { Heart, Star } from "@iconkit/react/mdi"
-import { Settings, Home } from "@iconkit/react/lucide"
+      code={`import { Heart, Star } from "@iconrift/react/mdi"
+import { Settings, Home } from "@iconrift/react/lucide"
 
 <Heart size={16} color={liked ? "#ef4444" : "currentColor"} />
 <Star size={16} color={starred ? "#f59e0b" : "currentColor"} />
@@ -215,9 +215,9 @@ function CardExample() {
   return (
     <ExampleSection
       title="Feature Cards"
-      code={`import { Github, Zap } from "@iconkit/react/lucide"
-import { LanguageTypescript } from "@iconkit/react/mdi"
-import { PackageBold } from "@iconkit/react/ph"
+      code={`import { Github, Zap } from "@iconrift/react/lucide"
+import { LanguageTypescript } from "@iconrift/react/mdi"
+import { PackageBold } from "@iconrift/react/ph"
 
 <Github size={20} color="#333" />
 <LanguageTypescript size={20} color="#3178c6" />
@@ -296,7 +296,7 @@ function ListExample() {
   return (
     <ExampleSection
       title="Settings List"
-      code={`import { User, Bell, Shield, Palette, ChevronDown } from "@iconkit/react/lucide"
+      code={`import { User, Bell, Shield, Palette, ChevronDown } from "@iconrift/react/lucide"
 
 <User size={18} />
 <Bell size={18} />
@@ -346,7 +346,7 @@ function DynamicExample() {
   return (
     <ExampleSection
       title="Dynamic Icon Loading"
-      code={`import { Icon, IconProvider } from "@iconkit/react"
+      code={`import { Icon, IconProvider } from "@iconrift/react"
 
 <IconProvider basePath="/api/icons">
   <Icon name="lucide:rocket" size={48} color="var(--accent)" />
@@ -414,7 +414,7 @@ function MultiColorStaticExample() {
   return (
     <ExampleSection
       title="Multi-Color Icons (Static)"
-      code={`import { Fire } from "@iconkit/react/twemoji"
+      code={`import { Fire } from "@iconrift/react/twemoji"
 
 <Fire size={48} />`}
     >

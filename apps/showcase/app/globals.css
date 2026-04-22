@@ -8,8 +8,8 @@
   --border: #2a2a2a;
   --border-hover: #3a3a3a;
   --text-primary: #f5f5f5;
-  --text-secondary: #a0a0a0;
-  --text-muted: #666666;
+  --text-secondary: #d4d4d4;
+  --text-muted: #a3a3a3;
   --accent: #6366f1;
   --accent-hover: #818cf8;
 }
@@ -22,8 +22,44 @@ body {
 
 /* Icon grid item hover */
 .icon-cell:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--border-hover);
+  background: var(--bg-card-hover) !important;
+  border-color: var(--border-hover) !important;
+}
+
+/* Interactive card-style hover (buttons, badges, copy rows) */
+.hover-card {
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.hover-card:hover {
+  background: var(--bg-card-hover) !important;
+  border-color: var(--border-hover) !important;
+}
+
+/* Accent button hover (lighten) */
+.hover-accent {
+  transition: background 0.15s;
+}
+.hover-accent:hover {
+  background: var(--accent-hover) !important;
+}
+
+
+/* Link-style hover (text color shift) */
+.hover-link {
+  transition: color 0.15s;
+}
+.hover-link:hover {
+  color: var(--text-primary) !important;
+}
+
+/* Icon grid button hover */
+.hover-icon:hover {
+  background: var(--bg-card) !important;
+}
+
+/* Search input focus */
+input[type="text"]:focus {
+  border-color: var(--accent) !important;
 }
 
 /* Checkerboard background for icon preview */

@@ -2,33 +2,46 @@ import Link from "next/link"
 import { Suspense } from "react"
 import { getCollections, getSampleIcons } from "@/lib/icons"
 import { SearchBar } from "@/components/SearchBar"
+import { customizeSvg } from "@iconrift/react"
 
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; category?: string }>
 }) {
-  const { q } = await searchParams
+  const { q, category: cat } = await searchParams
   const allCollections = getCollections()
 
-  const filtered = q
-    ? allCollections.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q.toLowerCase()) ||
-          c.prefix.toLowerCase().includes(q.toLowerCase()) ||
-          c.category.toLowerCase().includes(q.toLowerCase())
-      )
-    : allCollections
+  let filtered = allCollections
+  if (cat) {
+    filtered = filtered.filter((c) => c.category === cat)
+  }
+  if (q) {
+    filtered = filtered.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q.toLowerCase()) ||
+        c.prefix.toLowerCase().includes(q.toLowerCase()) ||
+        c.category.toLowerCase().includes(q.toLowerCase())
+    )
+  }
 
   // Count totals
   const totalIcons = allCollections.reduce((sum, c) => sum + c.total, 0)
+
+  // Pre-compute categories with counts
+  const categories = Array.from(new Set(allCollections.map((c) => c.category)))
+    .sort()
+    .map((category) => ({
+      name: category,
+      count: allCollections.filter((c) => c.category === category).length,
+    }))
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
       <header className="text-center mb-10">
         <h1 className="text-4xl font-bold tracking-tight mb-2">
-          <span style={{ color: "var(--accent)" }}>Icon</span>Kit
+          <span style={{ color: "var(--accent)" }}>Icon</span>Rift
         </h1>
         <p style={{ color: "var(--text-secondary)" }} className="text-lg mb-6">
           {allCollections.length.toLocaleString()} icon sets &middot;{" "}
@@ -44,7 +57,7 @@ export default async function HomePage({
         <div className="flex items-center justify-center gap-3">
           <Link
             href="/playground"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="hover-card inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
             style={{
               background: "var(--bg-card)",
               color: "var(--text-secondary)",
@@ -58,7 +71,7 @@ export default async function HomePage({
           </Link>
           <Link
             href="/sandbox"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            className="hover-card inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
             style={{
               background: "var(--bg-card)",
               color: "var(--text-secondary)",
@@ -76,36 +89,38 @@ export default async function HomePage({
 
       {/* Category badges */}
       <div className="flex flex-wrap justify-center gap-2 mb-8">
-        {Array.from(new Set(allCollections.map((c) => c.category)))
-          .sort()
-          .map((cat) => {
-            const count = allCollections.filter(
-              (c) => c.category === cat
-            ).length
-            return (
-              <span
-                key={cat}
-                className="px-3 py-1 rounded-full text-xs border"
-                style={{
-                  background: "var(--bg-card)",
-                  borderColor: "var(--border)",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                {cat}{" "}
-                <span style={{ color: "var(--text-muted)" }}>({count})</span>
-              </span>
-            )
-          })}
+        {categories.map(({ name: category, count }) => {
+          const isActive = cat === category
+          const href = isActive
+            ? q ? `/?q=${encodeURIComponent(q)}` : "/"
+            : q ? `/?q=${encodeURIComponent(q)}&category=${encodeURIComponent(category)}` : `/?category=${encodeURIComponent(category)}`
+          return (
+            <Link
+              key={category}
+              href={href}
+              className={`${isActive ? "hover-accent" : "hover-card"} px-3 py-1 rounded-full text-xs border`}
+              style={{
+                background: isActive ? "var(--accent)" : "var(--bg-card)",
+                borderColor: isActive ? "var(--accent)" : "var(--border)",
+                color: isActive ? "#fff" : "var(--text-secondary)",
+              }}
+            >
+              {category}{" "}
+              <span style={{ color: isActive ? "rgba(255,255,255,0.7)" : "var(--text-muted)" }}>({count})</span>
+            </Link>
+          )
+        })}
       </div>
 
       {/* Results count */}
-      {q && (
+      {(q || cat) && (
         <p
           className="text-sm mb-4"
           style={{ color: "var(--text-secondary)" }}
         >
-          {filtered.length} result{filtered.length !== 1 ? "s" : ""} for &ldquo;{q}&rdquo;
+          {filtered.length} result{filtered.length !== 1 ? "s" : ""}
+          {q && <> for &ldquo;{q}&rdquo;</>}
+          {cat && <> in <strong>{cat}</strong></>}
         </p>
       )}
 
@@ -148,20 +163,23 @@ function IconSetCard({
     >
       {/* Sample icons */}
       <div className="flex items-center gap-3 mb-3">
-        {samples.map((icon) => (
-          <span
-            key={icon.name}
-            className="w-6 h-6 flex items-center justify-center shrink-0"
-            style={{ color: "var(--text-secondary)" }}
-            dangerouslySetInnerHTML={{ __html: icon.svg }}
-          />
-        ))}
+        {samples.map((icon) => {
+          const html = customizeSvg(icon.svg, { size: 24, color: "var(--text-primary)" })
+          return (
+            <span
+              key={icon.name}
+              className="flex items-center justify-center shrink-0"
+              style={{ display: "inline-flex", alignItems: "center" }}
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          )
+        })}
       </div>
 
       {/* Info */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="font-semibold text-sm truncate">
+          <h2 className="font-semibold text-base truncate">
             {collection.name}
           </h2>
           <p

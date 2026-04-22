@@ -1,5 +1,5 @@
 {
-  "name": "@iconkit/react",
+  "name": "@iconrift/react",
   "version": "1.0.0",
   "type": "module",
   "main": "./src/index.ts",
@@ -9,7 +9,7 @@
     "./*": "./generated/*.ts"
   },
   "dependencies": {
-    "@iconkit/core": "*"
+    "@iconrift/core": "*"
   },
   "peerDependencies": {
     "react": ">=18",

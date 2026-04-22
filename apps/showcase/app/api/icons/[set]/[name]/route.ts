@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getIconSvg } from "@/lib/icons"
-import { customizeSvg, type IconCustomizations } from "@iconkit/core"
+import { customizeSvg, type IconCustomizations } from "@iconrift/core"
 
 export async function GET(
   _request: NextRequest,

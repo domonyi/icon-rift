@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect, useMemo } from "react"
+import { useState, useCallback, useRef, useEffect, useMemo, memo } from "react"
 import { Sidebar } from "./Sidebar"
 
 interface IconData {
@@ -124,6 +124,52 @@ function applySvgCustomization(svg: string, c: Customization, colorOverrides?: s
   return s
 }
 
+const IconGridItem = memo(function IconGridItem({
+  icon,
+  isActive,
+  custom,
+  gridColors,
+  onSelect,
+}: {
+  icon: IconData
+  isActive: boolean
+  custom: Customization
+  gridColors: string[] | undefined
+  onSelect: (icon: IconData) => void
+}) {
+  const previewSvg = useMemo(
+    () => applySvgCustomization(icon.svg, custom, gridColors),
+    [icon.svg, custom, gridColors]
+  )
+
+  return (
+    <button
+      onClick={() => onSelect(icon)}
+      className="hover-icon flex items-center justify-center p-3 rounded-lg transition-all duration-150 cursor-pointer"
+      style={{
+        background: isActive ? "var(--accent)" : undefined,
+        outline: isActive
+          ? "2px solid var(--accent)"
+          : "2px solid transparent",
+        contentVisibility: "auto",
+        containIntrinsicSize: `${custom.size + 24}px`,
+      }}
+      title={icon.name}
+    >
+      <span
+        className="flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+        style={{
+          width: custom.size,
+          height: custom.size,
+          color: isActive ? "#fff" : undefined,
+          transition: "width 0.15s, height 0.15s",
+        }}
+        dangerouslySetInnerHTML={{ __html: previewSvg }}
+      />
+    </button>
+  )
+})
+
 export function SetPageClient({ icons: initialIcons, prefix, total, totalPages, query, header }: SetPageClientProps) {
   const [allIcons, setAllIcons] = useState<IconData[]>(initialIcons)
   const [page, setPage] = useState(1)
@@ -224,7 +270,22 @@ export function SetPageClient({ icons: initialIcons, prefix, total, totalPages, 
     [selected]
   )
 
-  const effectiveColors = colorOverrides.length > 0 ? colorOverrides : globalColors.length > 0 ? globalColors : undefined
+  const gridColors = useMemo(
+    () => globalColors.length > 0 ? globalColors : undefined,
+    [globalColors]
+  )
+
+  const effectiveColors = useMemo(
+    () => colorOverrides.length > 0 ? colorOverrides : gridColors,
+    [colorOverrides, gridColors]
+  )
+
+  const gridStyle = useMemo(
+    () => ({
+      gridTemplateColumns: `repeat(auto-fill, minmax(${Math.max(custom.size + 24, 72)}px, 1fr))`,
+    }),
+    [custom.size]
+  )
 
   const customizedSvg = useMemo(
     () => (selected ? applySvgCustomization(selected.svg, custom, effectiveColors) : ""),
@@ -265,39 +326,18 @@ export function SetPageClient({ icons: initialIcons, prefix, total, totalPages, 
         {/* Icon grid */}
         <div
           className="grid gap-3 px-6 pb-8"
-          style={{
-            gridTemplateColumns: `repeat(auto-fill, minmax(${Math.max(custom.size + 24, 72)}px, 1fr))`,
-          }}
+          style={gridStyle}
         >
-          {allIcons.map((icon) => {
-            const isActive = selected?.name === icon.name
-            const previewSvg = applySvgCustomization(icon.svg, custom, globalColors.length > 0 ? globalColors : undefined)
-            return (
-              <button
-                key={icon.name}
-                onClick={() => handleSelect(icon)}
-                className="flex items-center justify-center p-3 rounded-lg transition-all duration-150 cursor-pointer"
-                style={{
-                  background: isActive ? "var(--accent)" : undefined,
-                  outline: isActive
-                    ? "2px solid var(--accent)"
-                    : "2px solid transparent",
-                }}
-                title={icon.name}
-              >
-                <span
-                  className="flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
-                  style={{
-                    width: custom.size,
-                    height: custom.size,
-                    color: isActive ? "#fff" : undefined,
-                    transition: "width 0.15s, height 0.15s",
-                  }}
-                  dangerouslySetInnerHTML={{ __html: previewSvg }}
-                />
-              </button>
-            )
-          })}
+          {allIcons.map((icon) => (
+            <IconGridItem
+              key={icon.name}
+              icon={icon}
+              isActive={selected?.name === icon.name}
+              custom={custom}
+              gridColors={gridColors}
+              onSelect={handleSelect}
+            />
+          ))}
         </div>
 
         {hasMore && (

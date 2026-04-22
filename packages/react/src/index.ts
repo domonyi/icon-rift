@@ -2,7 +2,7 @@ export { Icon, type IconProps } from "./Icon"
 export { IconProvider, useIconContext, type IconProviderProps, type IconContextValue } from "./IconProvider"
 export { createIcon, type IconComponentProps, type TypedIconProps, type IconComponent } from "./createIcon"
 
-// Re-export core utilities so users don't need to install @iconkit/core separately
+// Re-export core utilities so users don't need to install @iconrift/core separately
 export {
   customizeSvg,
   extractPalette,
@@ -15,4 +15,4 @@ export {
   type IconEntry,
   type IconLoader,
   type ColorsTuple,
-} from "@iconkit/core"
+} from "@iconrift/core"

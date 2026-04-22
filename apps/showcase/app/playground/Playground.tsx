@@ -11,7 +11,7 @@ import {
   getSvgAttributes,
   svgToDataUri,
   svgToBase64,
-} from "@iconkit/react"
+} from "@iconrift/react"
 
 /* ─── Types ─── */
 
@@ -325,7 +325,7 @@ function DynamicIconSection({ samples }: { samples: Sample[] }) {
       <div className="flex items-center gap-3">
         <button
           onClick={runTests}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+          className="hover-accent px-3 py-1.5 rounded-lg text-xs font-medium"
           style={{
             background: "var(--accent)",
             color: "#fff",
@@ -494,7 +494,7 @@ function MultiColorSection({ samples }: { samples: Sample[] }) {
           <button
             key={`${s.set}:${s.name}`}
             onClick={() => setSelectedIdx(i)}
-            className="flex flex-col items-center gap-1.5 px-3 py-2 rounded-lg transition-all"
+            className={`flex flex-col items-center gap-1.5 px-3 py-2 rounded-lg transition-all ${i === selectedIdx ? "" : "hover-card"}`}
             style={{
               background: i === selectedIdx ? "var(--accent)" : "var(--bg-secondary)",
               outline: i === selectedIdx ? "2px solid var(--accent)" : "none",
@@ -581,7 +581,7 @@ function MultiColorSection({ samples }: { samples: Sample[] }) {
           {colorOverrides.length > 0 && (
             <button
               onClick={() => { setColorOverrides([]); setActiveSlot(null) }}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+              className="hover-card px-3 py-1.5 rounded-lg text-xs font-medium"
               style={{
                 background: "var(--bg-secondary)",
                 color: "var(--text-secondary)",

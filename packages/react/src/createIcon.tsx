@@ -1,4 +1,4 @@
-import { customizeSvg, type IconCustomizations, type ColorsTuple } from "@iconkit/core"
+import { customizeSvg, type IconCustomizations, type ColorsTuple } from "@iconrift/core"
 
 export interface IconComponentProps
   extends IconCustomizations,

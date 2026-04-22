@@ -1,6 +1,6 @@
 import fs from "fs"
 import path from "path"
-import type { IconSetMeta } from "@iconkit/core"
+import type { IconSetMeta } from "@iconrift/core"
 
 function findRootDir(): string {
   let dir = process.cwd()
@@ -94,6 +94,9 @@ export function getIconSvg(prefix: string, name: string): string {
   }
 }
 
+// Cache for sample icons per set
+const sampleIconsCache = new Map<string, Array<{ name: string; svg: string }>>()
+
 /**
  * Get sample icons for a set (with SVG content).
  */
@@ -101,6 +104,9 @@ export function getSampleIcons(
   prefix: string,
   count = 4
 ): Array<{ name: string; svg: string }> {
+  const cacheKey = `${prefix}:${count}`
+  if (sampleIconsCache.has(cacheKey)) return sampleIconsCache.get(cacheKey)!
+
   const meta = getCollection(prefix)
   let names: string[]
 
@@ -120,10 +126,13 @@ export function getSampleIcons(
     names = getIconNames(prefix).slice(0, count)
   }
 
-  return names.map((name) => ({
+  const result = names.map((name) => ({
     name,
     svg: getIconSvg(prefix, name),
   }))
+
+  sampleIconsCache.set(cacheKey, result)
+  return result
 }
 
 /**

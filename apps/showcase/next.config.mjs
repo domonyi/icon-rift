@@ -5,7 +5,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@iconkit/core", "@iconkit/react"],
+  transpilePackages: ["@iconrift/core", "@iconrift/react"],
   outputFileTracingRoot: path.resolve(__dirname, "../.."),
 }
 

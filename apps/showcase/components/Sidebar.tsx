@@ -353,7 +353,7 @@ function CustomizePanel({
 
           <button
             onClick={handleAddSlot}
-            className="flex items-center justify-center rounded-md transition-colors"
+            className="hover-card flex items-center justify-center rounded-md"
             style={{
               width: 28,
               height: 28,
@@ -398,7 +398,7 @@ function CustomizePanel({
               setGlobalColors([])
               setActiveGlobalSlot(null)
             }}
-            className="mt-2 text-[10px] font-medium px-1.5 py-0.5 rounded"
+            className="hover-card mt-2 text-[10px] font-medium px-1.5 py-0.5 rounded"
             style={{ color: "var(--text-muted)", background: "var(--bg-card)" }}
           >
             Clear all colors
@@ -481,7 +481,7 @@ function CustomizePanel({
           setGlobalColors([])
           setActiveGlobalSlot(null)
         }}
-        className="w-full py-2 rounded-lg text-xs font-medium transition-colors"
+        className="hover-card w-full py-2 rounded-lg text-xs font-medium"
         style={{
           background: "var(--bg-card)",
           color: "var(--text-secondary)",
@@ -562,7 +562,7 @@ function PaletteEditor({
         {overrides.length > 0 && (
           <button
             onClick={handleReset}
-            className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+            className="hover-card text-[10px] font-medium px-1.5 py-0.5 rounded"
             style={{ color: "var(--text-muted)", background: "var(--bg-secondary)" }}
           >
             Reset
@@ -657,7 +657,7 @@ function CodePanel({
     <div className="space-y-2">
       <CopyRow
         label="Import"
-        value={`import { ${componentName} } from '@iconkit/react/${prefix}'`}
+        value={`import { ${componentName} } from '@iconrift/react/${prefix}'`}
         copied={copied}
         onCopy={onCopy}
       />
@@ -706,7 +706,7 @@ function CopyRow({
   return (
     <button
       onClick={() => onCopy(value, label)}
-      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border text-left text-sm transition-colors duration-150"
+      className="hover-card w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border text-left text-sm"
       style={{
         background: "var(--bg-card)",
         borderColor: isCopied ? "var(--accent)" : "var(--border)",

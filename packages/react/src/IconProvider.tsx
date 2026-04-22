@@ -6,7 +6,7 @@ import {
   useMemo,
   type ReactNode,
 } from "react"
-import type { IconCustomizations, IconLoader } from "@iconkit/core"
+import type { IconCustomizations, IconLoader } from "@iconrift/core"
 
 export interface IconContextValue {
   loader: IconLoader

@@ -34,7 +34,7 @@ export default async function SetPage({
           <div className="mb-4">
             <Link
               href="/"
-              className="inline-flex items-center gap-1.5 text-sm mb-4 transition-colors"
+              className="hover-link inline-flex items-center gap-1.5 text-sm mb-4"
               style={{ color: "var(--text-secondary)" }}
             >
               <svg
@@ -78,7 +78,7 @@ export default async function SetPage({
                     href={collection.author.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="underline"
+                    className="hover-link underline"
                     style={{ color: "var(--text-secondary)" }}
                   >
                     {collection.author.name}

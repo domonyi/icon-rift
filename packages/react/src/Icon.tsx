@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, type HTMLAttributes } from "react"
-import { customizeSvg, extractPalette, type IconCustomizations } from "@iconkit/core"
+import { customizeSvg, extractPalette, type IconCustomizations } from "@iconrift/core"
 import { useIconContext } from "./IconProvider"
 
 export interface IconProps

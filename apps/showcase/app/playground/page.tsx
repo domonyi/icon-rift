@@ -53,7 +53,7 @@ export default function PlaygroundPage() {
 
       <header className="mb-10">
         <h1 className="text-3xl font-bold tracking-tight mb-1">
-          <span style={{ color: "var(--accent)" }}>IconKit</span> Playground
+          <span style={{ color: "var(--accent)" }}>IconRift</span> Playground
         </h1>
         <p style={{ color: "var(--text-secondary)" }} className="text-sm">
           Interactive test bench — verify every part of the library is working.
