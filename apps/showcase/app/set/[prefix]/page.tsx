@@ -1,8 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { Suspense } from "react"
 import { getCollection, getIconsPage } from "@/lib/icons"
-import { SearchBar } from "@/components/SearchBar"
 import { SetPageClient } from "@/components/SetPageClient"
 
 const PER_PAGE = 200
@@ -59,7 +57,7 @@ export default async function SetPage({
                 >
                   <span>{collection.prefix}</span>
                   <span>&middot;</span>
-                  <span>{collection.total.toLocaleString()} icons</span>
+                  <span>{collection.total.toLocaleString("en-US")} icons</span>
                   <span>&middot;</span>
                   <span>{collection.category}</span>
                 </div>
@@ -89,13 +87,6 @@ export default async function SetPage({
               </span>
               <span>License: {collection.license.title}</span>
             </div>
-          </div>
-
-          {/* Search */}
-          <div className="max-w-md">
-            <Suspense>
-              <SearchBar placeholder={`Search ${collection.total.toLocaleString()} icons...`} />
-            </Suspense>
           </div>
 
           {/* Results info */}

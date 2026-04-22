@@ -1,6 +1,10 @@
 import "./globals.css";
 
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import { TopNav } from "@/components/TopNav";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "IconRift — 300,000+ Open Source Icons",
@@ -15,7 +19,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className={`${inter.className} min-h-screen antialiased`}>
+        <TopNav />
+        <div className="pt-14">{children}</div>
+      </body>
     </html>
   );
 }

@@ -317,7 +317,7 @@ export function SetPageClient({ icons: initialIcons, prefix, total, totalPages, 
   }, [selected])
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden">
       {/* Left column: fixed header + scrollable grid */}
       <div className="flex-1 min-w-0 flex flex-col">
         {header}
@@ -358,7 +358,7 @@ export function SetPageClient({ icons: initialIcons, prefix, total, totalPages, 
             className="text-center text-xs py-6"
             style={{ color: "var(--text-muted)" }}
           >
-            {total.toLocaleString()} icons
+            {total.toLocaleString("en-US")} icons
           </p>
         )}
 

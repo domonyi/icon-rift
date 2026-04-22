@@ -34,12 +34,17 @@ function loadCollectionsRaw(): Record<string, Record<string, unknown>> {
 // Cache for icon name lists per set
 const iconNamesCache = new Map<string, string[]>()
 
+// Cache for parsed collections
+let collectionsCache: IconSetMeta[] | null = null
+let collectionsByPrefix: Map<string, IconSetMeta> | null = null
+
 /**
  * Get metadata for all icon sets.
  */
 export function getCollections(): IconSetMeta[] {
+  if (collectionsCache) return collectionsCache
   const raw = loadCollectionsRaw()
-  return Object.entries(raw).map(([prefix, meta]) => ({
+  collectionsCache = Object.entries(raw).map(([prefix, meta]) => ({
     prefix,
     name: (meta.name as string) || prefix,
     total: (meta.total as number) || 0,
@@ -53,14 +58,16 @@ export function getCollections(): IconSetMeta[] {
     palette: (meta.palette as boolean) || false,
     samples: (meta.samples as string[]) || [],
   }))
+  collectionsByPrefix = new Map(collectionsCache.map((c) => [c.prefix, c]))
+  return collectionsCache
 }
 
 /**
  * Get metadata for a single icon set.
  */
 export function getCollection(prefix: string): IconSetMeta | null {
-  const all = getCollections()
-  return all.find((c) => c.prefix === prefix) ?? null
+  if (!collectionsByPrefix) getCollections()
+  return collectionsByPrefix!.get(prefix) ?? null
 }
 
 /**
@@ -124,6 +131,17 @@ export function getSampleIcons(
     }
   } else {
     names = getIconNames(prefix).slice(0, count)
+  }
+
+  // Per-set sample overrides
+  const overrides: Record<string, string[]> = {
+    "line-md": ["image-twotone", "account", "beer-alt-twotone", "cloud-alt-download-twotone"],
+  }
+  if (overrides[prefix]) {
+    const ov = overrides[prefix].filter((n) =>
+      fs.existsSync(path.join(SVG_DIR, prefix, `${n}.svg`))
+    )
+    if (ov.length >= count) names = ov.slice(0, count)
   }
 
   const result = names.map((name) => ({

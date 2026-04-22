@@ -1,15 +1,16 @@
 import Link from "next/link"
 import { Suspense } from "react"
 import { getCollections, getSampleIcons } from "@/lib/icons"
-import { SearchBar } from "@/components/SearchBar"
 import { customizeSvg } from "@iconrift/react"
+import { CardActions } from "@/components/CardActions"
+import { SortToggle } from "@/components/SortToggle"
 
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string }>
+  searchParams: Promise<{ q?: string; category?: string; sort?: string }>
 }) {
-  const { q, category: cat } = await searchParams
+  const { q, category: cat, sort } = await searchParams
   const allCollections = getCollections()
 
   let filtered = allCollections
@@ -25,10 +26,17 @@ export default async function HomePage({
     )
   }
 
-  // Count totals
-  const totalIcons = allCollections.reduce((sum, c) => sum + c.total, 0)
+  // Sort (default = original order from @iconify/json)
+  if (sort === "a-z") {
+    filtered.sort((a, b) => a.name.localeCompare(b.name))
+  } else if (sort === "z-a") {
+    filtered.sort((a, b) => b.name.localeCompare(a.name))
+  } else if (sort === "most") {
+    filtered.sort((a, b) => b.total - a.total)
+  } else if (sort === "least") {
+    filtered.sort((a, b) => a.total - b.total)
+  }
 
-  // Pre-compute categories with counts
   const categories = Array.from(new Set(allCollections.map((c) => c.category)))
     .sort()
     .map((category) => ({
@@ -37,32 +45,35 @@ export default async function HomePage({
     }))
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
-      <header className="text-center mb-10">
-        <h1 className="text-4xl font-bold tracking-tight mb-2">
-          <span style={{ color: "var(--accent)" }}>Icon</span>Rift
-        </h1>
-        <p style={{ color: "var(--text-secondary)" }} className="text-lg mb-6">
-          {allCollections.length.toLocaleString()} icon sets &middot;{" "}
-          {totalIcons.toLocaleString()} icons
-        </p>
-
-        <div className="max-w-xl mx-auto mb-4">
-          <Suspense>
-            <SearchBar placeholder="Search icon sets..." />
-          </Suspense>
-        </div>
-
-        <div className="flex items-center justify-center gap-3">
+    <div className="flex h-[calc(100vh-3.5rem)]">
+      {/* Left Sidebar */}
+      <aside
+        className="hidden lg:flex flex-col w-56 shrink-0 border-r overflow-y-auto"
+        style={{ borderColor: "var(--border)" }}
+      >
+        <div className="p-3 space-y-0.5">
+          <Link
+            href="/"
+            className={`cat-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium${!cat ? " active" : ""}`}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            Home
+          </Link>
+          <Link
+            href="#"
+            className="cat-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+            Favorites
+          </Link>
           <Link
             href="/playground"
-            className="hover-card inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
-            style={{
-              background: "var(--bg-card)",
-              color: "var(--text-secondary)",
-              border: "1px solid var(--border)",
-            }}
+            className="cat-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="5 3 19 12 5 21 5 3" />
@@ -71,12 +82,7 @@ export default async function HomePage({
           </Link>
           <Link
             href="/sandbox"
-            className="hover-card inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
-            style={{
-              background: "var(--bg-card)",
-              color: "var(--text-secondary)",
-              border: "1px solid var(--border)",
-            }}
+            className="cat-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -84,63 +90,118 @@ export default async function HomePage({
             </svg>
             Sandbox
           </Link>
-        </div>
-      </header>
-
-      {/* Category badges */}
-      <div className="flex flex-wrap justify-center gap-2 mb-8">
-        {categories.map(({ name: category, count }) => {
-          const isActive = cat === category
-          const href = isActive
-            ? q ? `/?q=${encodeURIComponent(q)}` : "/"
-            : q ? `/?q=${encodeURIComponent(q)}&category=${encodeURIComponent(category)}` : `/?category=${encodeURIComponent(category)}`
-          return (
-            <Link
-              key={category}
-              href={href}
-              className={`${isActive ? "hover-accent" : "hover-card"} px-3 py-1 rounded-full text-xs border`}
-              style={{
-                background: isActive ? "var(--accent)" : "var(--bg-card)",
-                borderColor: isActive ? "var(--accent)" : "var(--border)",
-                color: isActive ? "#fff" : "var(--text-secondary)",
-              }}
-            >
-              {category}{" "}
-              <span style={{ color: isActive ? "rgba(255,255,255,0.7)" : "var(--text-muted)" }}>({count})</span>
-            </Link>
-          )
-        })}
-      </div>
-
-      {/* Results count */}
-      {(q || cat) && (
-        <p
-          className="text-sm mb-4"
-          style={{ color: "var(--text-secondary)" }}
-        >
-          {filtered.length} result{filtered.length !== 1 ? "s" : ""}
-          {q && <> for &ldquo;{q}&rdquo;</>}
-          {cat && <> in <strong>{cat}</strong></>}
-        </p>
-      )}
-
-      {/* Icon set grid */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((col) => (
-          <IconSetCard key={col.prefix} collection={col} />
-        ))}
-      </div>
-
-      {filtered.length === 0 && (
-        <div className="text-center py-20">
-          <p
-            className="text-lg"
-            style={{ color: "var(--text-secondary)" }}
+          <Link
+            href="#"
+            className="cat-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium"
           >
-            No icon sets found
-          </p>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+            API
+          </Link>
+          <Link
+            href="#"
+            className="cat-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium"
+          >
+            <svg width="16" height="16" viewBox="0 0 256 256" fill="none">
+              <line x1="208" y1="128" x2="128" y2="208" stroke="currentColor" strokeWidth="25" strokeLinecap="round" />
+              <line x1="192" y1="40" x2="40" y2="192" stroke="currentColor" strokeWidth="25" strokeLinecap="round" />
+            </svg>
+            shadcn/ui
+          </Link>
+          <Link
+            href="#"
+            className="cat-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            </svg>
+            Extensions
+          </Link>
         </div>
-      )}
+
+        <div className="mx-3 border-t" style={{ borderColor: "var(--border)" }} />
+
+        <div className="p-3 space-y-0.5 flex-1 overflow-y-auto">
+          {categories.map(({ name: category, count }) => {
+            const isActive = cat === category
+            const href = isActive
+              ? q ? `/?q=${encodeURIComponent(q)}` : "/"
+              : q
+                ? `/?q=${encodeURIComponent(q)}&category=${encodeURIComponent(category)}`
+                : `/?category=${encodeURIComponent(category)}`
+            return (
+              <Link
+                key={category}
+                href={href}
+                className={`cat-link flex items-center justify-between px-3 py-1.5 rounded-lg text-sm${isActive ? " active" : ""}`}
+              >
+                <span className="truncate">{category}</span>
+                <span className="text-xs tabular-nums ml-2">{count}</span>
+              </Link>
+            )
+          })}
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 min-w-0 overflow-y-auto">
+        <div className="p-6">
+          {/* Content header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              {cat && (
+                <Link
+                  href={q ? `/?q=${encodeURIComponent(q)}` : "/"}
+                  className="hover-icon p-1 rounded-md"
+                  title="Clear category"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </Link>
+              )}
+              <h1 className="text-base font-semibold">
+                {cat && (
+                  <span style={{ color: "var(--text-muted)" }} className="font-normal">
+                    Icon Sets{" "}&rsaquo;{" "}
+                  </span>
+                )}
+                {cat || `${filtered.length.toLocaleString("en-US")} icon set${filtered.length !== 1 ? "s" : ""}`}
+                {cat && (
+                  <span className="font-normal ml-2" style={{ color: "var(--text-muted)" }}>
+                    {filtered.length.toLocaleString("en-US")} set{filtered.length !== 1 ? "s" : ""}
+                  </span>
+                )}
+                {q && (
+                  <span className="font-normal ml-2" style={{ color: "var(--text-muted)" }}>
+                    matching &ldquo;{q}&rdquo;
+                  </span>
+                )}
+              </h1>
+            </div>
+            <Suspense>
+              <SortToggle />
+            </Suspense>
+          </div>
+
+          {/* Icon set grid */}
+          <div
+            className="grid gap-4 max-w-[1400px] mx-auto"
+            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}
+          >
+            {filtered.map((col) => (
+              <IconSetCard key={col.prefix} collection={col} />
+            ))}
+          </div>
+
+          {filtered.length === 0 && (
+            <div className="text-center py-20">
+              <p style={{ color: "var(--text-secondary)" }}>No icon sets found</p>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   )
 }
@@ -155,64 +216,49 @@ function IconSetCard({
   return (
     <Link
       href={`/set/${collection.prefix}`}
-      className="icon-cell block rounded-xl border p-4 transition-all duration-150"
+      className="icon-cell group flex flex-col rounded-xl border transition-all duration-150"
       style={{
         background: "var(--bg-card)",
         borderColor: "var(--border)",
       }}
     >
-      {/* Sample icons */}
-      <div className="flex items-center gap-3 mb-3">
-        {samples.map((icon) => {
-          const html = customizeSvg(icon.svg, { size: 24, color: "var(--text-primary)" })
-          return (
+      {/* Icon display area */}
+      <div className="flex items-center justify-center gap-3 py-7 px-4">
+        {samples.length > 0 ? (
+          samples.map((icon) => (
             <span
               key={icon.name}
-              className="flex items-center justify-center shrink-0"
-              style={{ display: "inline-flex", alignItems: "center" }}
-              dangerouslySetInnerHTML={{ __html: html }}
+              className="flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+              style={{ width: 28, height: 28 }}
+              dangerouslySetInnerHTML={{
+                __html: customizeSvg(icon.svg, {
+                  size: 28,
+                  color: "var(--text-primary)",
+                }),
+              }}
             />
-          )
-        })}
+          ))
+        ) : (
+          <div className="w-7 h-7 rounded-lg" style={{ background: "var(--bg-secondary)" }} />
+        )}
       </div>
 
       {/* Info */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className="font-semibold text-base truncate">
-            {collection.name}
-          </h2>
-          <p
-            className="text-xs mt-0.5"
-            style={{ color: "var(--text-muted)" }}
-          >
-            {collection.prefix}
-          </p>
-        </div>
-        <div className="text-right shrink-0">
-          <span
-            className="text-xs font-medium px-2 py-0.5 rounded-full"
-            style={{
-              background: "var(--bg-secondary)",
-              color: "var(--text-secondary)",
-            }}
-          >
-            {collection.total.toLocaleString()}
-          </span>
-        </div>
+      <div className="px-3 pb-2">
+        <h2 className="font-medium text-sm truncate">{collection.name}</h2>
+        <span className="text-xs mt-0.5 block" style={{ color: "var(--text-muted)" }}>{collection.license.spdx}</span>
       </div>
 
-      {/* Meta */}
-      <div
-        className="flex items-center gap-2 mt-2 text-[11px]"
-        style={{ color: "var(--text-muted)" }}
-      >
-        <span>{collection.category}</span>
-        <span>&middot;</span>
-        <span>{collection.license.spdx}</span>
-        <span>&middot;</span>
-        <span>{collection.author.name}</span>
-      </div>
+      {/* Action buttons + count */}
+      <CardActions
+        prefix={collection.prefix}
+        authorName={collection.author.name}
+        authorUrl={collection.author.url}
+        licenseSpdx={collection.license.spdx}
+        licenseTitle={collection.license.title}
+        category={collection.category}
+        iconCount={collection.total}
+      />
     </Link>
   )
 }

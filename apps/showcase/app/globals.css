@@ -17,7 +17,7 @@
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-inter, "Inter"), system-ui, -apple-system, sans-serif;
 }
 
 /* Icon grid item hover */
@@ -29,6 +29,7 @@ body {
 /* Interactive card-style hover (buttons, badges, copy rows) */
 .hover-card {
   transition: background 0.15s, border-color 0.15s, color 0.15s;
+  cursor: pointer;
 }
 .hover-card:hover {
   background: var(--bg-card-hover) !important;
@@ -38,6 +39,7 @@ body {
 /* Accent button hover (lighten) */
 .hover-accent {
   transition: background 0.15s;
+  cursor: pointer;
 }
 .hover-accent:hover {
   background: var(--accent-hover) !important;
@@ -60,6 +62,7 @@ body {
 /* Search input focus */
 input[type="text"]:focus {
   border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 /* Checkerboard background for icon preview */
@@ -103,6 +106,20 @@ input[type="text"]:focus {
   background: var(--accent);
   cursor: pointer;
   border: 2px solid var(--bg-secondary);
+}
+
+/* Category sidebar link */
+.cat-link {
+  color: var(--text-muted);
+  transition: background 0.15s, color 0.15s;
+}
+.cat-link:hover {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+}
+.cat-link.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
 }
 
 /* Custom scrollbar */

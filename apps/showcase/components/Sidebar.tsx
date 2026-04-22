@@ -57,7 +57,7 @@ export function Sidebar({
 }: SidebarProps) {
   return (
     <aside
-      className="hidden lg:flex flex-col shrink-0 h-screen overflow-y-auto border-l"
+      className="hidden lg:flex flex-col shrink-0 h-[calc(100vh-3.5rem)] overflow-y-auto border-l"
       style={{
         width: 300,
         background: "var(--bg-secondary)",
