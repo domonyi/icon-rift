@@ -28,8 +28,10 @@ export function SearchBar({
       if (value) {
         params.set(paramName, value)
         params.delete("page") // Reset pagination on search
+        params.delete("category")
       } else {
         params.delete(paramName)
+        params.delete("category")
       }
       startTransition(() => {
         router.push(`${pathname}?${params.toString()}`)

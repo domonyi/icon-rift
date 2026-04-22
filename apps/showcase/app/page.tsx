@@ -14,9 +14,6 @@ export default async function HomePage({
   const allCollections = getCollections()
 
   let filtered = allCollections
-  if (cat) {
-    filtered = filtered.filter((c) => c.category === cat)
-  }
   if (q) {
     filtered = filtered.filter(
       (c) =>
@@ -24,6 +21,8 @@ export default async function HomePage({
         c.prefix.toLowerCase().includes(q.toLowerCase()) ||
         c.category.toLowerCase().includes(q.toLowerCase())
     )
+  } else if (cat) {
+    filtered = filtered.filter((c) => c.category === cat)
   }
 
   // Sort (default = original order from @iconify/json)
@@ -37,12 +36,27 @@ export default async function HomePage({
     filtered.sort((a, b) => a.total - b.total)
   }
 
-  const categories = Array.from(new Set(allCollections.map((c) => c.category)))
-    .sort()
-    .map((category) => ({
-      name: category,
-      count: allCollections.filter((c) => c.category === category).length,
-    }))
+  const categoryOrder = [
+    "Material",
+    "UI 24px",
+    "UI 16px / 32px",
+    "UI Other / Mixed Grid",
+    "UI Multicolor",
+    "Programming",
+    "Logos",
+    "Emoji",
+    "Flags / Maps",
+    "Thematic",
+    "Archive / Unmaintained",
+  ]
+  const allCategoryNames = Array.from(new Set(allCollections.map((c) => c.category)))
+  const categories = [
+    ...categoryOrder.filter((c) => allCategoryNames.includes(c)),
+    ...allCategoryNames.filter((c) => !categoryOrder.includes(c)),
+  ].map((category) => ({
+    name: category,
+    count: allCollections.filter((c) => c.category === category).length,
+  }))
 
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">
@@ -150,9 +164,9 @@ export default async function HomePage({
           {/* Content header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              {cat && (
+              {cat && !q && (
                 <Link
-                  href={q ? `/?q=${encodeURIComponent(q)}` : "/"}
+                  href="/"
                   className="hover-icon p-1 rounded-md"
                   title="Clear category"
                 >
@@ -162,13 +176,15 @@ export default async function HomePage({
                 </Link>
               )}
               <h1 className="text-base font-semibold">
-                {cat && (
+                {cat && !q && (
                   <span style={{ color: "var(--text-muted)" }} className="font-normal">
                     Icon Sets{" "}&rsaquo;{" "}
                   </span>
                 )}
-                {cat || `${filtered.length.toLocaleString("en-US")} icon set${filtered.length !== 1 ? "s" : ""}`}
-                {cat && (
+                {cat && !q
+                  ? cat
+                  : `${filtered.length.toLocaleString("en-US")} icon set${filtered.length !== 1 ? "s" : ""}`}
+                {cat && !q && (
                   <span className="font-normal ml-2" style={{ color: "var(--text-muted)" }}>
                     {filtered.length.toLocaleString("en-US")} set{filtered.length !== 1 ? "s" : ""}
                   </span>
@@ -186,14 +202,44 @@ export default async function HomePage({
           </div>
 
           {/* Icon set grid */}
-          <div
-            className="grid gap-4 max-w-[1400px] mx-auto"
-            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}
-          >
-            {filtered.map((col) => (
-              <IconSetCard key={col.prefix} collection={col} />
-            ))}
-          </div>
+          {!cat && !q ? (
+            // Grouped by category
+            <div className="space-y-8 max-w-[1400px] mx-auto">
+              {categories.map(({ name: category }) => {
+                const items = filtered.filter((c) => c.category === category)
+                if (items.length === 0) return null
+                return (
+                  <section key={category}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <h2 className="text-sm font-semibold">{category}</h2>
+                      <span className="text-xs tabular-nums" style={{ color: "var(--text-muted)" }}>
+                        {items.length}
+                      </span>
+                      <div className="flex-1 border-t" style={{ borderColor: "var(--border)" }} />
+                    </div>
+                    <div
+                      className="grid gap-4"
+                      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}
+                    >
+                      {items.map((col) => (
+                        <IconSetCard key={col.prefix} collection={col} />
+                      ))}
+                    </div>
+                  </section>
+                )
+              })}
+            </div>
+          ) : (
+            // Flat grid when filtered by category or search
+            <div
+              className="grid gap-4 max-w-[1400px] mx-auto"
+              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" }}
+            >
+              {filtered.map((col) => (
+                <IconSetCard key={col.prefix} collection={col} />
+              ))}
+            </div>
+          )}
 
           {filtered.length === 0 && (
             <div className="text-center py-20">
