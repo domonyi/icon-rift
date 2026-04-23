@@ -1,14 +1,14 @@
 # IconRift
 
-A TypeScript-first icon library ecosystem built on [Iconify](https://iconify.design/). Access 100+ icon collections (200,000+ icons) with full SVG customization, type-safe multi-color support, and React components.
+A TypeScript-first icon library ecosystem built on [Iconify](https://iconify.design/). Access 200+ icon collections (300,000+ icons) with full SVG customization, type-safe multi-color support, and React components.
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| `@iconrift/core` | SVG utilities, customization engine, and TypeScript types |
-| `@iconrift/react` | React components (`<Icon>`, `<IconProvider>`, `createIcon`) |
-| `@iconrift/meta` | Icon collection metadata (names, authors, licenses, samples) |
+| Package           | Description                                                  |
+| ----------------- | ------------------------------------------------------------ |
+| `@iconrift/core`  | SVG utilities, customization engine, and TypeScript types    |
+| `@iconrift/react` | React components (`<Icon>`, `<IconProvider>`, `createIcon`)  |
+| `@iconrift/meta`  | Icon collection metadata (names, authors, licenses, samples) |
 
 ## Installation
 
@@ -25,12 +25,12 @@ npm install @iconrift/react
 Use the `<Icon>` component with an `<IconProvider>` to load icons on demand:
 
 ```tsx
-import { Icon, IconProvider } from "@iconrift/react"
+import { Icon, IconProvider } from "@iconrift/react";
 
 const loader = async (set: string, name: string) => {
-  const res = await fetch(`/api/icons/${set}?name=${name}`)
-  return res.text()
-}
+  const res = await fetch(`/api/icons/${set}?name=${name}`);
+  return res.text();
+};
 
 function App() {
   return (
@@ -38,13 +38,35 @@ function App() {
       <Icon name="mdi:home" size={24} color="currentColor" />
       <Icon name="lucide:settings" size={24} stroke="gray" />
     </IconProvider>
-  )
+  );
 }
 ```
 
 ### Static / Pre-built Icons
 
-Use `createIcon` for zero-runtime-cost icons with full type safety:
+Import from 200+ icon sets directly — every icon is pre-built with zero runtime cost and full type safety:
+
+```tsx
+import { Home, Settings, AccountCircle } from "@iconrift/react/mdi"
+import { Github, Zap, Heart } from "@iconrift/react/lucide"
+import { FlagPride16Filled } from "@iconrift/react/fluent"
+
+function App() {
+  return (
+    <>
+      <Home size={24} color="currentColor" />
+      <Github size={24} />
+      <Heart size={32} colors={["red"]} />
+    </>
+  )
+}
+```
+
+Each icon set is available as a subpath import (`@iconrift/react/<set-name>`), so your bundler only includes the icons you actually use.
+
+#### Custom Icons with `createIcon`
+
+You can also create your own icon components from raw SVG using `createIcon`:
 
 ```tsx
 import { createIcon } from "@iconrift/react"
@@ -64,10 +86,10 @@ const HeartIcon = createIcon(
 Use `@iconrift/core` directly for framework-agnostic SVG manipulation:
 
 ```ts
-import { customizeSvg, extractPalette } from "@iconrift/core"
+import { customizeSvg, extractPalette } from "@iconrift/core";
 
-const svg = '<svg viewBox="0 0 24 24">...</svg>'
-const palette = extractPalette(svg)
+const svg = '<svg viewBox="0 0 24 24">...</svg>';
+const palette = extractPalette(svg);
 
 const customized = customizeSvg(svg, {
   size: 48,
@@ -75,27 +97,27 @@ const customized = customizeSvg(svg, {
   rotate: 90,
   flipH: true,
   opacity: 0.8,
-})
+});
 ```
 
 ## Customization Options
 
 All icon components accept these props:
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `size` | `number \| string` | Sets both width and height |
-| `width` / `height` | `number \| string` | Individual dimensions (override `size`) |
-| `color` | `string` | Fill color (replaces `currentColor`) |
-| `colors` | `string[]` | Positional palette overrides for multi-color icons |
-| `stroke` | `string` | Stroke color |
-| `strokeWidth` | `number \| string` | Stroke width |
-| `absoluteStrokeWidth` | `boolean` | Keep stroke constant regardless of icon size |
-| `rotate` | `number` | Rotation in degrees |
-| `flipH` / `flipV` | `boolean` | Horizontal / vertical flip |
-| `opacity` | `number` | Opacity (0-1) |
-| `className` | `string` | CSS class on the SVG element |
-| `title` | `string` | Accessible title element |
+| Prop                  | Type               | Description                                        |
+| --------------------- | ------------------ | -------------------------------------------------- |
+| `size`                | `number \| string` | Sets both width and height                         |
+| `width` / `height`    | `number \| string` | Individual dimensions (override `size`)            |
+| `color`               | `string`           | Fill color (replaces `currentColor`)               |
+| `colors`              | `string[]`         | Positional palette overrides for multi-color icons |
+| `stroke`              | `string`           | Stroke color                                       |
+| `strokeWidth`         | `number \| string` | Stroke width                                       |
+| `absoluteStrokeWidth` | `boolean`          | Keep stroke constant regardless of icon size       |
+| `rotate`              | `number`           | Rotation in degrees                                |
+| `flipH` / `flipV`     | `boolean`          | Horizontal / vertical flip                         |
+| `opacity`             | `number`           | Opacity (0-1)                                      |
+| `className`           | `string`           | CSS class on the SVG element                       |
+| `title`               | `string`           | Accessible title element                           |
 
 ## Type-Safe Multi-Color Icons
 
