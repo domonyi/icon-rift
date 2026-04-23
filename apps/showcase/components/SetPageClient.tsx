@@ -179,6 +179,7 @@ export function SetPageClient({ icons: initialIcons, prefix, total, totalPages, 
   const [custom, setCustom] = useState<Customization>(DEFAULT_CUSTOM)
   const [globalColors, setGlobalColors] = useState<string[]>([])
   const [colorOverrides, setColorOverrides] = useState<string[]>([])
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const selectedPalette = useMemo(
     () => (selected ? extractPalette(selected.svg) : []),
@@ -252,7 +253,14 @@ export function SetPageClient({ icons: initialIcons, prefix, total, totalPages, 
 
   const handleSelect = useCallback(
     (icon: IconData) => {
-      setSelected((prev) => (prev?.name === icon.name ? null : icon))
+      setSelected((prev) => {
+        const next = prev?.name === icon.name ? null : icon
+        // Auto-open sidebar drawer on mobile when selecting an icon
+        if (next && typeof window !== "undefined" && window.innerWidth < 1024) {
+          setSidebarOpen(true)
+        }
+        return next
+      })
       setCopied(null)
       setColorOverrides([])
     },
@@ -390,6 +398,8 @@ export function SetPageClient({ icons: initialIcons, prefix, total, totalPages, 
         setColorOverrides={setColorOverrides}
         copied={copied}
         onCopy={copyToClipboard}
+        mobileOpen={sidebarOpen}
+        onMobileOpenChange={setSidebarOpen}
       />
     </div>
   )
