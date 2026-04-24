@@ -210,13 +210,13 @@ export function HomeSidebar({
       {/* Mobile trigger button */}
       <button
         onClick={() => setDrawerOpen(true)}
-        className="lg:hidden fixed bottom-5 left-5 z-30 flex items-center justify-center w-12 h-12 rounded-full shadow-lg"
-        style={{ background: "var(--accent)", color: "#fff" }}
+        className="lg:hidden fixed bottom-5 left-5 z-30 flex items-center justify-center w-14 h-14 rounded-full shadow-xl border border-white/10 backdrop-blur-sm transition-all active:scale-95 hover:scale-105 hover:brightness-125 cursor-pointer"
+        style={{ background: "rgba(23,23,23,0.85)", color: "#fff" }}
         aria-label="Open menu"
       >
         <svg
-          width="20"
-          height="20"
+          width="24"
+          height="24"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"

@@ -41,7 +41,7 @@ export function SortToggle() {
     return () => document.removeEventListener("mousedown", handleClick)
   }, [open])
 
-  const label = SORT_OPTIONS.find((o) => o.value === current)?.label ?? "Default"
+  const label = current === "default" ? "Sort" : (SORT_OPTIONS.find((o) => o.value === current)?.label ?? "Sort")
 
   return (
     <div className="relative" ref={ref}>

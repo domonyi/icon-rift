@@ -5,16 +5,27 @@ import { customizeSvg } from "@iconrift/react"
 import { CardActions } from "@/components/CardActions"
 import { SortToggle } from "@/components/SortToggle"
 import { HomeSidebar } from "@/components/HomeSidebar"
+import { FilterBar } from "@/components/FilterBar"
 
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; category?: string; sort?: string }>
+  searchParams: Promise<{
+    q?: string
+    category?: string
+    sort?: string
+    commercial?: string
+    attribution?: string
+    palette?: string
+    group?: string
+  }>
 }) {
-  const { q, category: cat, sort } = await searchParams
+  const { q, category: cat, sort, commercial, attribution, palette, group } = await searchParams
   const allCollections = getCollections()
 
+  /* ---- Filter ---- */
   let filtered = allCollections
+
   if (q) {
     filtered = filtered.filter(
       (c) =>
@@ -26,7 +37,35 @@ export default async function HomePage({
     filtered = filtered.filter((c) => c.category === cat)
   }
 
-  // Sort (default = original order from @iconify/json)
+  // Licenses that require visible attribution
+  const ATTRIBUTION_REQUIRED = new Set([
+    "CC-BY-4.0", "CC-BY-SA-4.0", "CC-BY-3.0", "CC-BY-SA-3.0",
+  ])
+  // Licenses that restrict commercial use
+  const NO_COMMERCIAL = new Set([
+    "CC-BY-NC-4.0", "CC-BY-NC-3.0", "CC-BY-NC-SA-4.0", "CC-BY-NC-SA-3.0",
+    "CC-BY-NC-ND-4.0", "CC-BY-NC-ND-3.0",
+  ])
+
+  if (commercial === "yes") {
+    filtered = filtered.filter((c) => !NO_COMMERCIAL.has(c.license.spdx))
+  } else if (commercial === "no") {
+    filtered = filtered.filter((c) => NO_COMMERCIAL.has(c.license.spdx))
+  }
+
+  if (attribution === "none") {
+    filtered = filtered.filter((c) => !ATTRIBUTION_REQUIRED.has(c.license.spdx))
+  } else if (attribution === "required") {
+    filtered = filtered.filter((c) => ATTRIBUTION_REQUIRED.has(c.license.spdx))
+  }
+
+  if (palette === "mono") {
+    filtered = filtered.filter((c) => !c.palette)
+  } else if (palette === "color") {
+    filtered = filtered.filter((c) => c.palette)
+  }
+
+  /* ---- Sort ---- */
   if (sort === "a-z") {
     filtered.sort((a, b) => a.name.localeCompare(b.name))
   } else if (sort === "z-a") {
@@ -37,6 +76,7 @@ export default async function HomePage({
     filtered.sort((a, b) => a.total - b.total)
   }
 
+  /* ---- Categories (sidebar) ---- */
   const categoryOrder = [
     "Material",
     "UI 24px",
@@ -59,6 +99,64 @@ export default async function HomePage({
     count: allCollections.filter((c) => c.category === category).length,
   }))
 
+  /* ---- License category counts for filter bar ---- */
+  const licenseCounts = { commercial: 0, nonCommercial: 0, noAttribution: 0, attribution: 0 }
+  for (const c of allCollections) {
+    if (NO_COMMERCIAL.has(c.license.spdx)) {
+      licenseCounts.nonCommercial++
+    } else {
+      licenseCounts.commercial++
+    }
+    if (ATTRIBUTION_REQUIRED.has(c.license.spdx)) {
+      licenseCounts.attribution++
+    } else {
+      licenseCounts.noAttribution++
+    }
+  }
+
+  /* ---- Grouping ---- */
+  const effectiveGroup = group || (cat || q ? "none" : "category")
+
+  type GroupDef = { key: string; label: string; items: typeof filtered }
+  let groups: GroupDef[] = []
+
+  if (effectiveGroup === "none") {
+    groups = [{ key: "__all__", label: "", items: filtered }]
+  } else if (effectiveGroup === "license") {
+    const licenseCategories = [
+      { key: "commercial", label: "Commercial use allowed", test: (spdx: string) => !NO_COMMERCIAL.has(spdx) },
+      { key: "non-commercial", label: "Commercial use not allowed", test: (spdx: string) => NO_COMMERCIAL.has(spdx) },
+      { key: "no-attribution", label: "Attribution not required", test: (spdx: string) => !ATTRIBUTION_REQUIRED.has(spdx) },
+      { key: "attribution", label: "Attribution required", test: (spdx: string) => ATTRIBUTION_REQUIRED.has(spdx) },
+    ]
+    for (const cat of licenseCategories) {
+      const items = filtered.filter((c) => cat.test(c.license.spdx))
+      if (items.length > 0) groups.push({ key: cat.key, label: cat.label, items })
+    }
+  } else if (effectiveGroup === "author") {
+    const authorMap = new Map<string, typeof filtered>()
+    for (const c of filtered) {
+      const key = c.author.name
+      if (!authorMap.has(key)) authorMap.set(key, [])
+      authorMap.get(key)!.push(c)
+    }
+    groups = Array.from(authorMap.entries())
+      .sort((a, b) => b[1].length - a[1].length)
+      .map(([key, items]) => ({ key, label: key, items }))
+  } else {
+    // default: category
+    const orderedCats = [
+      ...categoryOrder.filter((c) => allCategoryNames.includes(c)),
+      ...allCategoryNames.filter((c) => !categoryOrder.includes(c)),
+    ]
+    for (const category of orderedCats) {
+      const items = filtered.filter((c) => c.category === category)
+      if (items.length > 0) groups.push({ key: category, label: category, items })
+    }
+  }
+
+  const showGroupHeaders = effectiveGroup !== "none"
+
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">
       {/* Left Sidebar */}
@@ -68,7 +166,7 @@ export default async function HomePage({
       <main className="flex-1 min-w-0 overflow-y-auto">
         <div className="p-6">
           {/* Content header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <div className="flex items-center gap-2">
               {cat && !q && (
                 <Link
@@ -102,40 +200,43 @@ export default async function HomePage({
                 )}
               </h1>
             </div>
-            <Suspense>
-              <SortToggle />
-            </Suspense>
+            <div className="flex items-center gap-1">
+              <Suspense>
+                <FilterBar licenseCounts={licenseCounts} />
+              </Suspense>
+              <div
+                className="w-px h-5 mx-1"
+                style={{ background: "var(--border)" }}
+              />
+              <Suspense>
+                <SortToggle />
+              </Suspense>
+            </div>
           </div>
 
           {/* Icon set grid */}
-          {!cat && !q ? (
-            // Grouped by category
+          {showGroupHeaders ? (
             <div className="space-y-8 max-w-[1400px] mx-auto">
-              {categories.map(({ name: category }) => {
-                const items = filtered.filter((c) => c.category === category)
-                if (items.length === 0) return null
-                return (
-                  <section key={category}>
-                    <div className="flex items-center gap-3 mb-3">
-                      <h2 className="text-sm font-semibold">{category}</h2>
-                      <span className="text-xs tabular-nums" style={{ color: "var(--text-muted)" }}>
-                        {items.length}
-                      </span>
-                      <div className="flex-1 border-t" style={{ borderColor: "var(--border)" }} />
-                    </div>
-                    <div className="card-grid grid">
-                      {items.map((col) => (
-                        <IconSetCard key={col.prefix} collection={col} />
-                      ))}
-                    </div>
-                  </section>
-                )
-              })}
+              {groups.map(({ key, label, items }) => (
+                <section key={key}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <h2 className="text-sm font-semibold">{label}</h2>
+                    <span className="text-xs tabular-nums" style={{ color: "var(--text-muted)" }}>
+                      {items.length}
+                    </span>
+                    <div className="flex-1 border-t" style={{ borderColor: "var(--border)" }} />
+                  </div>
+                  <div className="card-grid grid">
+                    {items.map((col) => (
+                      <IconSetCard key={col.prefix} collection={col} />
+                    ))}
+                  </div>
+                </section>
+              ))}
             </div>
           ) : (
-            // Flat grid when filtered by category or search
             <div className="card-grid grid max-w-[1400px] mx-auto">
-              {filtered.map((col) => (
+              {groups.flatMap((g) => g.items).map((col) => (
                 <IconSetCard key={col.prefix} collection={col} />
               ))}
             </div>
