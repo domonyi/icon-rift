@@ -119,6 +119,40 @@ export function getSampleIcons(
 }
 
 /**
+ * Get extended sample icons for cycling previews.
+ * Returns the curated samples as the first frame, plus additional icons
+ * from the directory for subsequent frames.
+ */
+export function getExtendedSamples(
+  prefix: string,
+  perFrame: number = 8,
+  maxFrames: number = 3
+): Array<{ name: string; svg: string }> {
+  const curated = getSampleIcons(prefix, perFrame)
+  if (maxFrames <= 1) return curated
+
+  const usedNames = new Set(curated.map((i) => i.name))
+  const needed = perFrame * (maxFrames - 1)
+
+  const allNames = getIconNames(prefix)
+  const extraNames = allNames
+    .filter((n) => !usedNames.has(n))
+    // Spread them out across the set for visual variety
+    .filter((_, i, arr) => {
+      const step = Math.max(1, Math.floor(arr.length / needed))
+      return i % step === 0
+    })
+    .slice(0, needed)
+
+  const extras = extraNames.map((name) => ({
+    name,
+    svg: getIconSvg(prefix, name),
+  }))
+
+  return [...curated, ...extras]
+}
+
+/**
  * Get a page of icons with SVG content.
  */
 export function getIconsPage(

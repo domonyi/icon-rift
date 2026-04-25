@@ -1,8 +1,9 @@
 import Link from "next/link"
 import { Suspense } from "react"
-import { getCollections, getSampleIcons } from "@/lib/icons"
+import { getCollections, getSampleIcons, getExtendedSamples } from "@/lib/icons"
 import { customizeSvg } from "@iconrift/react"
 import { CardActions } from "@/components/CardActions"
+import { IconPreviewCycler } from "@/components/IconPreviewCycler"
 import { SortToggle } from "@/components/SortToggle"
 import { HomeSidebar } from "@/components/HomeSidebar"
 import { FilterBar } from "@/components/FilterBar"
@@ -258,7 +259,31 @@ function IconSetCard({
 }: {
   collection: ReturnType<typeof getCollections>[number]
 }) {
-  const samples = getSampleIcons(collection.prefix, 8)
+  const FRAME_SIZE = 8
+  const MAX_FRAMES = 5
+  const allSamples = getExtendedSamples(collection.prefix, FRAME_SIZE, MAX_FRAMES)
+
+  // Split into frames and pre-render SVG HTML
+  const frames: string[][] = []
+  for (let i = 0; i < allSamples.length; i += FRAME_SIZE) {
+    const chunk = allSamples.slice(i, i + FRAME_SIZE)
+    if (chunk.length === FRAME_SIZE) {
+      frames.push(
+        chunk.map((icon) =>
+          customizeSvg(icon.svg, { size: 32, color: "var(--text-primary)" })
+        )
+      )
+    }
+  }
+
+  // Fallback for sets with fewer icons than a full frame
+  if (frames.length === 0 && allSamples.length > 0) {
+    frames.push(
+      allSamples.map((icon) =>
+        customizeSvg(icon.svg, { size: 32, color: "var(--text-primary)" })
+      )
+    )
+  }
 
   return (
     <Link
@@ -269,26 +294,14 @@ function IconSetCard({
         borderColor: "var(--border)",
       }}
     >
-      {/* Icon display area */}
-      <div className="card-icons flex items-center justify-center">
-        {samples.length > 0 ? (
-          samples.map((icon, i) => (
-            <span
-              key={icon.name}
-              className="card-icon flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
-              data-index={i}
-              dangerouslySetInnerHTML={{
-                __html: customizeSvg(icon.svg, {
-                  size: 32,
-                  color: "var(--text-primary)",
-                }),
-              }}
-            />
-          ))
-        ) : (
+      {/* Icon display area with hover cycling */}
+      {frames.length > 0 ? (
+        <IconPreviewCycler frames={frames} />
+      ) : (
+        <div className="card-icons flex items-center justify-center">
           <div className="w-7 h-7 rounded-lg" style={{ background: "var(--bg-secondary)" }} />
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Info */}
       <div className="px-3 pb-2">

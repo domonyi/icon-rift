@@ -18,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" translate="no">
       <body className={`${inter.className} min-h-screen antialiased`}>
         <TopNav />
         <div className="pt-14">{children}</div>
