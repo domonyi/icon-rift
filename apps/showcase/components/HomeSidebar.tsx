@@ -100,7 +100,7 @@ export function HomeSidebar({
           Sandbox
         </Link>
         <Link
-          href="#"
+          href="/docs"
           onClick={onNav}
           className="cat-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium"
         >

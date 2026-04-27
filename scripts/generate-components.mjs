@@ -12,8 +12,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = join(__dirname, "..")
 const svgDir = join(rootDir, "svg")
 const generatedDir = join(rootDir, "packages", "react", "generated")
+const metaNamesDir = join(rootDir, "packages", "meta", "src", "names")
 
 if (!existsSync(generatedDir)) mkdirSync(generatedDir, { recursive: true })
+if (!existsSync(metaNamesDir)) mkdirSync(metaNamesDir, { recursive: true })
 
 function toPascalCase(name) {
   const parts = name.split(/[-_.\s]+/).filter(Boolean)
@@ -96,6 +98,7 @@ for (const prefix of sets) {
   if (files.length === 0) continue
 
   const usedNames = new Map()
+  const catalogEntries = []
   const lines = [
     `// Auto-generated — do not edit`,
     `// Icon set: ${prefix} (${files.length} icons)`,
@@ -117,6 +120,8 @@ for (const prefix of sets) {
       usedNames.set(componentName, 1)
     }
 
+    catalogEntries.push([iconName, componentName])
+
     const escaped = escapeSvg(svg)
     const palette = extractPalette(svg)
     const paletteArg = palette.length > 0
@@ -127,7 +132,33 @@ for (const prefix of sets) {
     )
   }
 
+  // Append icon catalog to the generated React component file
+  lines.push("")
+  lines.push("/** Every icon in this set: [originalName, ComponentName] */")
+  lines.push(`export const catalog = ${JSON.stringify(catalogEntries)} as const`)
+  lines.push("")
+  lines.push("export type IconName = (typeof catalog)[number][0]")
+  lines.push("export type ComponentName = (typeof catalog)[number][1]")
+
   writeFileSync(join(generatedDir, `${prefix}.ts`), lines.join("\n") + "\n")
+
+  // Generate lightweight name list in @iconrift/meta
+  const namesList = catalogEntries.map(([name]) => name)
+  const namesContent = [
+    `// Auto-generated — do not edit`,
+    `// Icon set: ${prefix} (${namesList.length} icons)`,
+    ``,
+    `/** All icon names in the "${prefix}" set */`,
+    `export const names = ${JSON.stringify(namesList)} as const`,
+    ``,
+    `/** Original icon name → PascalCase component name */`,
+    `export const catalog = ${JSON.stringify(Object.fromEntries(catalogEntries))} as const`,
+    ``,
+    `export type IconName = (typeof names)[number]`,
+    ``,
+  ].join("\n")
+  writeFileSync(join(metaNamesDir, `${prefix}.ts`), namesContent)
+
   exportMap[prefix] = files.length
   totalComponents += files.length
 

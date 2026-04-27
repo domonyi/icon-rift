@@ -1,0 +1,10 @@
+// Auto-generated — do not edit
+// Icon set: unjs (63 icons)
+
+/** All icon names in the "unjs" set */
+export const names = ["automd","bundle-runner","c12","changelogen","citty","confbox","consola","cookie-es","crossws","db0","defu","destr","fontaine","fs-memo","get-port-please","giget","h3","hookable","httpxy","image-meta","ipx","jimp-compact","jiti","knitwork","listhen","magic-regexp","magicast","mdbox","mkdist","mlly","mongoz","nanotar","nitro","node-fetch-native","nypm","ofetch","ohash","pathe","perfect-debounce","pkg-types","radix3","rc9","scule","serve-placeholder","std-env","theme-colors","ufo","unbuild","uncrypto","unctx","undocs","unenv","ungh","unhead","unimport","unpdf","unplugin","unstorage","untun","untyped","unwasm","uqr","webpackbar"] as const
+
+/** Original icon name → PascalCase component name */
+export const catalog = {"automd":"Automd","bundle-runner":"BundleRunner","c12":"C12","changelogen":"Changelogen","citty":"Citty","confbox":"Confbox","consola":"Consola","cookie-es":"CookieEs","crossws":"Crossws","db0":"Db0","defu":"Defu","destr":"Destr","fontaine":"Fontaine","fs-memo":"FsMemo","get-port-please":"GetPortPlease","giget":"Giget","h3":"H3","hookable":"Hookable","httpxy":"Httpxy","image-meta":"ImageMeta","ipx":"Ipx","jimp-compact":"JimpCompact","jiti":"Jiti","knitwork":"Knitwork","listhen":"Listhen","magic-regexp":"MagicRegexp","magicast":"Magicast","mdbox":"Mdbox","mkdist":"Mkdist","mlly":"Mlly","mongoz":"Mongoz","nanotar":"Nanotar","nitro":"Nitro","node-fetch-native":"NodeFetchNative","nypm":"Nypm","ofetch":"Ofetch","ohash":"Ohash","pathe":"Pathe","perfect-debounce":"PerfectDebounce","pkg-types":"PkgTypes","radix3":"Radix3","rc9":"Rc9","scule":"Scule","serve-placeholder":"ServePlaceholder","std-env":"StdEnv","theme-colors":"ThemeColors","ufo":"Ufo","unbuild":"Unbuild","uncrypto":"Uncrypto","unctx":"Unctx","undocs":"Undocs","unenv":"Unenv","ungh":"Ungh","unhead":"Unhead","unimport":"Unimport","unpdf":"Unpdf","unplugin":"Unplugin","unstorage":"Unstorage","untun":"Untun","untyped":"Untyped","unwasm":"Unwasm","uqr":"Uqr","webpackbar":"Webpackbar"} as const
+
+export type IconName = (typeof names)[number]
